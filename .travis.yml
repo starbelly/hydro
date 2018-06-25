@@ -5,7 +5,7 @@ otp_release:
 
 install:
   - git clone https://github.com/jedisct1/libhydrogen
-  - pushd libhydrogen && make && sudo make install && popd
+  - pushd libhydrogen && CFLAGS=-fPIC make && sudo make install && popd
 
 script:
   - rebar3 do proper --cover --numtests 500, cover -v
