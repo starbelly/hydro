@@ -4,9 +4,8 @@ otp_release:
   - 21.0
 
 install:
-  - wget https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.16.tar.gz 
-  - tar -zxvf libsodium-1.0.16.tar.gz 
-  - pushd libsodium-1.0.16 && ./configure --prefix=/usr && make && sudo make install && popd
+  - git clone https://github.com/jedisct1/libhydrogen
+  - pushd libhydrogen && make && sudo make install && popd
 
 script:
   - rebar3 do proper --cover --numtests 500, cover -v

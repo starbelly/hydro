@@ -1,4 +1,4 @@
-image: registry.gitlab.com/starbelly/soda:latest
+image: registry.gitlab.com/starbelly/helium:latest
 
 test:
   script:
