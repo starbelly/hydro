@@ -1,0 +1,5 @@
+image: registry.gitlab.com/starbelly/soda:latest
+
+test:
+  script:
+    - rebar3 do proper --cover --numtests 500, cover -v

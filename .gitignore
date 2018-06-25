@@ -1,0 +1,16 @@
+# Ignore build artificacts, deps, doc, and crash dumps
+/_build/
+/deps/
+/doc/
+erl_crash.dump
+*.crashdump
+
+# Ignore c object files
+*.o
+*.so
+
+# Ignore rebar3
+rebar3
+
+# Ignore beam files
+*.beam
