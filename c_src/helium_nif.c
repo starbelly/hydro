@@ -16,12 +16,11 @@ helium_load(ErlNifEnv * env, void **priv_data, ERL_NIF_TERM load_info)
 static int
 helium_upgrade(ErlNifEnv * env, void **priv, void **old_priv, ERL_NIF_TERM info)
 {
-	return helium_load(env, priv, info);
+	return 0;
 }
 
 static void helium_unload(ErlNifEnv * env, void *priv)
 {
-	enif_free(priv);
 	return;
 }
 
