@@ -1,4 +1,4 @@
--module(prop_helium_api).
+-module(prop_hydro_api).
 -include_lib("proper/include/proper.hrl").
 
 %%%%%%%%%%%%%%%%%%
@@ -8,14 +8,14 @@
 prop_random_buf() ->
   ?FORALL({I},{non_neg_integer()},
   begin
-    is_binary(helium_api:random_buf(I))
+    is_binary(hydro_api:random_buf(I))
   end).
 
 prop_random_buf_neg_int_fail() ->
   ?FORALL({I},{neg_integer()},
   begin
     try
-        helium_api:random_buf(I),
+        hydro_api:random_buf(I),
         false
     catch
         error:badarg          -> true;

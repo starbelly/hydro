@@ -1,4 +1,4 @@
-{application, helium,
+{application, hydro,
  [{description, "libhydrogen bindings for Erlang"},
   {vsn, "0.1.0"},
   {registered, []},
@@ -10,6 +10,6 @@
   {modules, []},
   {maintainers, ["Bryan Paxton"]},
   {licenses, ["MIT"]},
-  {links, [{"Gitlab", "https://gitlab.com/starbelly/helium"}, 
-           {"Github", "https://github.com/starbelly/helium"}]}
+  {links, [{"Gitlab", "https://gitlab.com/starbelly/hydro"}, 
+           {"Github", "https://github.com/starbelly/hydro"}]}
  ]}.

@@ -1,6 +1,6 @@
 # Based on c_src.mk from erlang.mk by LoÃƒÂ¯c Hoguin <essen@ninenines.eu>
 
-PROJECT ?= helium_nif
+PROJECT ?= hydro_nif
 
 ERTS_INCLUDE_DIR ?= $(shell erl -noshell -s init stop -eval "io:format(\"~s/erts-~s/include/\", [code:root_dir(), erlang:system_info(version)]).")
 ERL_INTERFACE_INCLUDE_DIR ?= $(shell erl -noshell -s init stop -eval "io:format(\"~s\", [code:lib_dir(erl_interface, include)]).")

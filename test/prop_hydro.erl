@@ -1,4 +1,4 @@
--module(prop_helium).
+-module(prop_hydro).
 -include_lib("proper/include/proper.hrl").
 
 %%%%%%%%%%%%%%%%%%
@@ -8,7 +8,7 @@
 prop_rand() ->
   ?FORALL({I},{non_neg_integer()},
   begin
-    is_binary(helium:rand(I))
+    is_binary(hydro:rand(I))
   end).
 
 

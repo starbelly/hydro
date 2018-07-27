@@ -1,9 +1,9 @@
-%%% @doc module helium_api provides bindings to libhydrogen for Erlang
+%%% @doc module hydro_api provides bindings to libhydrogen for Erlang
 %%% @end.
--module(helium_api).
+-module(hydro_api).
 
--define(APPNAME, helium).
--define(LIBNAME, helium_nif).
+-define(APPNAME, hydro).
+-define(LIBNAME, hydro_nif).
 
 -on_load(init/0).
 
