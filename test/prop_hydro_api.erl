@@ -5,6 +5,19 @@
 %%% Properties %%%
 %%%%%%%%%%%%%%%%%%
 
+prop_random_uniform() ->
+  ?FORALL({I},{non_neg_integer()},
+  begin
+    is_integer(hydro_api:random_uniform(I))
+  end).
+
+prop_random_u32() ->
+  ?FORALL({}, {},
+  begin
+    is_integer(hydro_api:random_u32())
+  end).
+
+
 prop_random_buf() ->
   ?FORALL({I},{non_neg_integer()},
   begin
