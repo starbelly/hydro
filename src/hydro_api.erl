@@ -7,11 +7,15 @@
 
 -on_load(init/0).
 
--export([random_buf/1]).
+-export([random_buf/1, random_u32/0]).
 
 -spec random_buf(non_neg_integer()) -> binary().
 random_buf(N) when N >= 0 ->
     hydro_random_buf(N).
+
+-spec random_u32() -> integer().
+random_u32() ->
+    hydro_random_u32().
 
 %%% @private
 init() ->
@@ -28,4 +32,8 @@ init() ->
     end,
     erlang:load_nif(SoName, 0).
 
-hydro_random_buf(_RequestedSize)                                          -> erlang:nif_error(nif_not_loaded).
+hydro_random_buf(_RequestedSize) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_random_u32() -> 
+    erlang:nif_error(nif_not_loaded).

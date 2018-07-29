@@ -2,10 +2,11 @@
 %%% @end.
 -module(hydro).
 
--export([rand/1]).
+-export([rand/1, dice/1]).
 
 -spec rand(non_neg_integer()) -> binary().
 rand(N) when N >= 0 ->
     hydro_api:random_buf(N).
 
-
+dice(32) -> 
+    hydro_api:random_u32().

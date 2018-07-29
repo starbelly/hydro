@@ -50,10 +50,25 @@ enif_hydro_random_buf(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	return enif_make_binary(env, &result);
 }
 
+static ERL_NIF_TERM
+enif_hydro_random_u32(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary result;
+
+	if (argc != 0) {
+		return enif_make_badarg(env);
+	}
+
+  uint32_t r_uint32 = hydro_random_u32();
+
+	return enif_make_uint(env, r_uint32);
+}
 
 static ErlNifFunc nif_funcs[] = {
   {"hydro_random_buf", 1,
 	 enif_hydro_random_buf, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+  {"hydro_random_u32", 0,
+	 enif_hydro_random_u32, ERL_NIF_DIRTY_JOB_CPU_BOUND}
 };
 
 ERL_NIF_INIT(hydro_api, nif_funcs, &hydro_load, NULL, &hydro_upgrade, &hydro_unload);
