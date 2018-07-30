@@ -30,7 +30,6 @@ static ERL_NIF_TERM hydro_error(ErlNifEnv * env, char *error_atom)
 				enif_make_atom(env, error_atom));
 }
 
-
 static ERL_NIF_TERM
 enif_hydro_random_buf(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 {
@@ -77,13 +76,35 @@ enif_hydro_random_uniform(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
   return enif_make_uint(env, r_uint32);
 }
 
+static ERL_NIF_TERM
+enif_hydro_hash_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+  ErlNifBinary hash;
+
+  if (argc != 0) {
+    return enif_make_badarg(env);
+  }
+
+ //  uint8_t key[hydro_hash_KEYBYTES];
+
+	if (!enif_alloc_binary(hydro_hash_KEYBYTES, &hash)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+  hydro_hash_keygen(hash.data);
+
+	return enif_make_binary(env, &hash);
+}
+
 static ErlNifFunc nif_funcs[] = {
   {"hydro_random_buf", 1,
 	 enif_hydro_random_buf, ERL_NIF_DIRTY_JOB_CPU_BOUND},
   {"hydro_random_u32", 0,
 	 enif_hydro_random_u32, ERL_NIF_DIRTY_JOB_CPU_BOUND},
   {"hydro_random_uniform", 1,
-	 enif_hydro_random_uniform, ERL_NIF_DIRTY_JOB_CPU_BOUND}
+	 enif_hydro_random_uniform, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+  {"hydro_hash_keygen", 0,
+	 enif_hydro_hash_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND}
 };
 
 ERL_NIF_INIT(hydro_api, nif_funcs, &hydro_load, NULL, &hydro_upgrade, &hydro_unload);

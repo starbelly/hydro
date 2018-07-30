@@ -12,11 +12,11 @@ Libhydrogen bindings for Erlang
         * [rand/1](#rand1)
         * [rand_uniform/1](#rand_uniform1)
     * [Hydro API](#hydro-api-1)
+        * [hash_keygen/0](#hash_keygen)
         * [random_u32/0](#random_u320)
         * [random_buf/1](#random_buf1)
         * [random_uniform/1](#random_uniform1)
 * [Reference](#reference)
-      
 
 ## About
 
@@ -104,6 +104,15 @@ bound (exlusive).
 ### Hydro API
 
  For advanced usage there is the hydro api.
+
+#### hash_keygen/0
+Create a secret key suitable for use with hash*
+
+```erlang
+1> hydro_api:hash_keygen().
+<<196,216,103,100,59,248,220,7,212,176,11,59,76,54,33,27,
+  87,166,157,249,120,120,106,253,233,234,148,136,133,...>>
+```
 
 #### random_u32/0
 

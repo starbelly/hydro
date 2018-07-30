@@ -7,7 +7,10 @@
 
 -on_load(init/0).
 
--export([random_buf/1, random_u32/0, random_uniform/1]).
+-export([hash_keygen/0, random_buf/1, random_u32/0, random_uniform/1]).
+
+hash_keygen() -> 
+    hydro_hash_keygen().
 
 -spec random_buf(non_neg_integer()) -> binary().
 random_buf(N) when N >= 0 ->
@@ -35,6 +38,9 @@ init() ->
             filename:join(Dir, ?LIBNAME)
     end,
     erlang:load_nif(SoName, 0).
+
+hydro_hash_keygen() -> 
+    erlang:nif_error(nif_not_loaded).
 
 hydro_random_buf(_requestedsize) -> 
     erlang:nif_error(nif_not_loaded).

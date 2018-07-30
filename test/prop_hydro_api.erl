@@ -17,6 +17,11 @@ prop_random_u32() ->
     is_integer(hydro_api:random_u32())
   end).
 
+prop_hash_keygen() ->
+  ?FORALL({}, {},
+  begin
+    is_binary(hydro_api:hash_keygen())
+  end).
 
 prop_random_buf() ->
   ?FORALL({I},{non_neg_integer()},
