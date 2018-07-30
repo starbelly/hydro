@@ -3,6 +3,21 @@ Hydro [![Hex Version](https://img.shields.io/hexpm/v/hydro.svg)](https://hex.pm/
 
 Libhydrogen bindings for Erlang
 
+* [Installation](#installation)
+    * [Rebar3](#rebar3)
+    * [Mix](#mix)
+* [Usage](#usage)
+    * [Hydro](#hydro)
+        * [dice/0](#dice0)
+        * [rand/1](#rand1)
+        * [rand_uniform/1](#rand_uniform1)
+    * [Hydro API](#hydro-api-1)
+        * [random_u32/0](#random_u320)
+        * [random_buf/1](#random_buf1)
+        * [random_uniform/1](#random_uniform1)
+* [Reference](#reference)
+      
+
 ## About
 
 hydro provides Erlang bindings to the Hydrogen Crypto Library ([libhydrogen](https://www.libhydrogen.org/doc/)).
@@ -25,10 +40,6 @@ iex(1)> n = :hydro.rand(42)
 <<115,97,120,157,28,208,118,165,137,95,122,152,195,49,52,
   188,73,136,216,201,77,183,29,144,110,108,111,101,180...>>
 ```
-### Hydro API
-
- For advanced usage hydro provides hydro_api
-
 
 ## Installation
 
@@ -81,7 +92,7 @@ Generates and returns a random sequence of bytes up to the specified size.
 Generates and returns a uniform distributed random value between 0 and the supplied upper
 bound (exlusive).
 
-```
+```erlang
 1> hydro:rand_uniform(100*100).
 1243
 2> hydro:rand_uniform(100*100).
