@@ -23,6 +23,58 @@ prop_hash_keygen() ->
     is_binary(hydro_api:hash_keygen())
   end).
 
+prop_hash_hash() ->
+  ?FORALL({Size, Msg, Context, Key}, {range(24,64), binary(), binary(8),
+                                      binary(32)},
+  begin
+    {ok, Hash} = hydro_api:hash_hash(Size, Msg, Context, Key),
+    true = is_binary(Hash)
+  end).
+
+prop_hash_hash_keyless() ->
+  ?FORALL({Size, Msg, Context}, {range(24,64), binary(), binary(8)},
+  begin
+    {ok, Hash} = hydro_api:hash_hash(Size, Msg, Context),
+    true = is_binary(Hash)
+  end).
+
+prop_hash_init() ->
+  ?FORALL({Size, Context, Key}, {range(32,65535), binary(8),
+                                      binary(32)},
+  begin
+    {ok, State} = hydro_api:hash_init(Size, Context, Key),
+    true = is_reference(State)
+  end).
+
+prop_hash_init_keyless() ->
+  ?FORALL({Size, Context}, {range(32,65535), binary(8)},
+  begin
+    {ok, State} = hydro_api:hash_init(Size, Context),
+    true = is_reference(State)
+  end).
+
+prop_hash_update() ->
+    ?FORALL({Size, Context, Key, Msg}, {range(32, 65535), binary(8),
+                                        binary(32), binary()},
+            begin
+                {ok, Ref} = hydro_api:hash_init(Size, Context, Key),
+                true = is_reference(Ref),
+                {ok, true} = hydro_api:hash_update(Ref, Msg),
+                true
+            end).
+
+prop_hash_final() ->
+    ?FORALL({Size, Context, Msg1, Msg2}, {range(32, 65535), binary(8),
+                                      binary(), binary()},
+            begin
+                {ok, Ref} = hydro_api:hash_init(Size, Context),
+                true = is_reference(Ref),
+                {ok, true} = hydro_api:hash_update(Ref, Msg1),
+                {ok, true} = hydro_api:hash_update(Ref, Msg2),
+                {ok, Hash} = hydro_api:hash_final(Size, Ref),
+                is_binary(Hash)
+            end).
+
 prop_random_buf() ->
   ?FORALL({I},{non_neg_integer()},
   begin

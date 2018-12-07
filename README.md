@@ -1,4 +1,4 @@
-Hydro [![Hex Version](https://img.shields.io/hexpm/v/hydro.svg)](https://hex.pm/packages/hydro) [![Gitlab-CI](https://gitlab.com/starbelly/hydro/badges/master/pipeline.svg)](https://gitlab.com/starbelly/hydro/commits/master) [![Travis-CI](https://travis-ci.com/starbelly/hydro.svg?branch=master)](https://travis-ci.com/starbelly/hydro) [![coverage report](https://gitlab.com/starbelly/hydro/badges/master/coverage.svg)](https://gitlab.com/starbelly/hydro/commits/master) [![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
+Hydro [![Hex Version](https://img.shields.io/hexpm/v/hydro.svg)](https://hex.pm/packages/hydro) [![Gitlab-CI](https://gitlab.com/starbelly/hydro/badges/master/pipeline.svg)](https://gitlab.com/starbelly/hydro/commits/master) [![Travis-CI](https://travis-ci.com/starbelly/hydro.svg?branch=master)](https://travis-ci.com/starbelly/hydro) [![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
 ============
 
 Libhydrogen bindings for Erlang
@@ -9,6 +9,7 @@ Libhydrogen bindings for Erlang
 * [Usage](#usage)
     * [Hydro](#hydro)
         * [dice/0](#dice0)
+        * [generic hashing](#generic_hashing)
         * [rand/1](#rand1)
         * [rand_uniform/1](#rand_uniform1)
     * [Hydro API](#hydro-api-1)
@@ -72,6 +73,58 @@ Generates and returns a random value between 0 and 0xffffffff (inclusive).
 2426160804
 3> hydro:dice().
 2140249458
+```
+
+#### Generic Hashing
+
+Note that a context is an 8 byte binary. 
+
+##### Single part
+
+Without a key
+
+```erlang
+1> hydro:hash(<<"context0">>, <<"msg">>, 64).
+{ok,<<231,51,76,246,39,178,123,195,254,34,172,216,53,135,
+      95,160,94,6,97,118,224,8,66,187,247,150,58,...>>}
+```
+
+With a key
+
+```erlang
+1> hydro:hash(<<"context1">>, <<"msg">>, 32, hydro:hash_keygen()).
+{ok,<<55,230,42,62,224,198,89,79,68,155,73,29,38,82,114,
+      199,66,128,43,180,27,92,152,135,252,224,145,...>>}
+```
+
+##### Multi-part 
+
+Without a key
+
+```erlang
+1> {ok, State} = hydro:hash_init(<<"context0">>, 42).
+{ok,#Ref<0.4176683979.2420768776.167622>}
+2> {ok, true} = hydro:hash_update(State, <<"MyMsg1">>).
+{ok,true}
+3> {ok, true} = hydro:hash_update(State, <<"MyMsg2">>).
+{ok,true}
+4> {ok, Hash} = hydro:hash_final(State, 88).
+{ok,<<44,201,1,123,196,16,201,224,112,217,21,86,149,189,
+      159,139,179,108,69,30,129,180,76,56,95,166,17,...>>}
+```
+
+With key
+
+```erlang
+1> {ok, State} = hydro:hash_init(<<"context0">>, 64, hydro:hash_keygen()).
+{ok,#Ref<0.1264487252.3744858120.160049>}
+2> {ok, true} = hydro:hash_update(State, <<"MyMsg1">>).
+{ok,true}
+3> {ok, true} = hydro:hash_update(State, <<"MyMsg2">>).
+{ok,true}
+4> {ok, Hash} = hydro:hash_final(State, 128).
+{ok,<<41,55,10,38,139,118,239,161,123,224,141,247,74,77,
+      123,91,119,28,2,34,69,137,146,203,160,122,81,...>>}
 ```
 
 #### rand/1

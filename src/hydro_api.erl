@@ -7,10 +7,47 @@
 
 -on_load(init/0).
 
--export([hash_keygen/0, random_buf/1, random_u32/0, random_uniform/1]).
+% rnd
+-export([random_buf/1, random_u32/0, random_uniform/1]).
 
+% generic  hashing
+-export([
+         hash_hash/3, 
+         hash_hash/4, 
+         hash_init/2,
+         hash_init/3, 
+         hash_update/2, 
+         hash_final/2, 
+         hash_keygen/0
+        ]). 
+
+-spec hash_keygen() -> binary().
 hash_keygen() -> 
     hydro_hash_keygen().
+
+-spec hash_hash(integer(), binary(), binary()) -> {ok, binary()} | {error, term()}.
+hash_hash(Size, Msg, Context) -> 
+    hydro_hash_hash(Size, Msg, Context, <<"">>).
+
+-spec hash_hash(integer(), binary(), binary(), binary()) -> {ok, binary()} | {error, term()}.
+hash_hash(Size, Msg, Context, Key) -> 
+    hydro_hash_hash(Size, Msg, Context, Key).
+
+-spec hash_init(integer(), binary()) -> {ok, reference()} | {error, term()}.
+hash_init(Size, Context) -> 
+    hydro_hash_init(Size, Context, <<"">>).
+
+-spec hash_init(integer(), binary(), binary()) -> {ok, reference()} | {error, term()}.
+hash_init(Size, Context, Key) -> 
+    hydro_hash_init(Size, Context, Key).
+
+-spec hash_update(reference(), binary()) -> {ok, boolean()} | {error, term()}.
+hash_update(State, Msg) -> 
+    hydro_hash_update(State, Msg).
+
+-spec hash_final(integer(), reference()) -> {ok, binary()} | {error, term()}.
+hash_final(Size, State) -> 
+    hydro_hash_final(Size, State).
 
 -spec random_buf(non_neg_integer()) -> binary().
 random_buf(N) when N >= 0 ->
@@ -40,6 +77,18 @@ init() ->
     erlang:load_nif(SoName, 0).
 
 hydro_hash_keygen() -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_hash_hash(_Size, _Msg, _Ctx, _Key) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_hash_init(_Size, _Ctx, _Key) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_hash_update(_State, _Msg) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_hash_final(_Size, _State) -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_random_buf(_requestedsize) -> 
