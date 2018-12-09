@@ -8,7 +8,7 @@
 -on_load(init/0).
 
 % rnd
--export([random_buf/1, random_u32/0, random_uniform/1]).
+-export([random_buf/1, random_u32/0, random_uniform/1, random_ratchet/0]).
 
 % generic  hashing
 -export([
@@ -57,6 +57,10 @@ random_buf(N) when N >= 0 ->
 random_uniform(N) when N >= 0 ->
     hydro_random_uniform(N).
 
+-spec random_ratchet() -> ok.
+random_ratchet() ->
+    hydro_random_ratchet().
+
 -spec random_u32() -> integer().
 random_u32() ->
     hydro_random_u32().
@@ -95,6 +99,9 @@ hydro_random_buf(_requestedsize) ->
     erlang:nif_error(nif_not_loaded).
 
 hydro_random_uniform(_UpperBound) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_random_ratchet() -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_random_u32() -> 

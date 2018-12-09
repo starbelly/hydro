@@ -17,6 +17,13 @@ prop_random_u32() ->
     is_integer(hydro_api:random_u32())
   end).
 
+prop_random_ratchet() ->
+  ?FORALL({}, {},
+  begin
+    ok = hydro_api:random_ratchet(),
+    true
+  end).
+
 prop_hash_keygen() ->
   ?FORALL({}, {},
   begin

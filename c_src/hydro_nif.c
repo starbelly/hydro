@@ -49,9 +49,9 @@
 #define NOT_IN_RANGE(arg1, arg2, arg3) (LT_OR_EQ(arg1, arg2) && GT_OR_EQ(arg1, arg2))
 
 
-#define HASH_STATE_NAME "generichash_state"
+#define HASH_STATE_NAME "hydro_hash_state"
 
-static ErlNifResourceType *gen_hash_state_t = NULL;
+static ErlNifResourceType *hydro_hash_state_t = NULL;
 
 static ErlNifResourceType *init_resource_type(ErlNifEnv * env)
 {
@@ -62,8 +62,8 @@ static ErlNifResourceType *init_resource_type(ErlNifEnv * env)
 static int
 hydro_load(ErlNifEnv * env, void **priv_data, ERL_NIF_TERM load_info)
 {
-  gen_hash_state_t = init_resource_type(env);
-	return !gen_hash_state_t || hydro_init() == -1 ? 1 : 0;
+  hydro_hash_state_t = init_resource_type(env);
+	return !hydro_hash_state_t || hydro_init() == -1 ? 1 : 0;
 }
 
 
@@ -88,19 +88,19 @@ static ERL_NIF_TERM
 enif_hydro_random_buf(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 {
 	unsigned req_size;
-	ErlNifBinary result;
+	ErlNifBinary buf;
 
 	if ((argc != 1) || (!enif_get_uint(env, argv[0], &req_size))) {
 		return enif_make_badarg(env);
 	}
 
-	if (!enif_alloc_binary(req_size, &result)) {
+	if (!enif_alloc_binary(req_size, &buf)) {
 		return hydro_error(env, "alloc_failed");
 	}
 
-	hydro_random_buf(result.data, result.size);
+	hydro_random_buf(buf.data, buf.size);
 
-	return enif_make_binary(env, &result);
+	return enif_make_binary(env, &buf);
 }
 
 static ERL_NIF_TERM
@@ -131,6 +131,17 @@ enif_hydro_random_uniform(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 }
 
 static ERL_NIF_TERM
+enif_hydro_random_ratchet(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])  { 
+	if ((argc != 0)) {
+		return enif_make_badarg(env);
+	}
+  
+  hydro_random_ratchet();
+
+  return MK_ATOM(env, ATOM_OK);
+}
+
+static ERL_NIF_TERM
 enif_hydro_hash_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 {
   ErlNifBinary hash;
@@ -138,8 +149,6 @@ enif_hydro_hash_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
   if (argc != 0) {
     return enif_make_badarg(env);
   }
-
- //  uint8_t key[hydro_hash_KEYBYTES];
 
 	if (!enif_alloc_binary(hydro_hash_KEYBYTES, &hash)) {
 		return hydro_error(env, "alloc_failed");
@@ -216,11 +225,7 @@ enif_hydro_hash_init(ErlNifEnv * env, int argc,
     return ERROR(env, ATOM_BAD_HASH_SIZE);
   }
 
-  unsigned char *key = k.data;
-
-  if (0 == k.size) { 
-    key = NULL;
-  }
+  unsigned char *key = (0 == k.size) ? NULL : k.data;
 
   if (key && LT(k.size, hydro_hash_KEYBYTES)) {
     return ERROR(env, ATOM_BAD_KEY_SIZE);
@@ -231,7 +236,7 @@ enif_hydro_hash_init(ErlNifEnv * env, int argc,
   }
 
   hydro_hash_state *state =
-      (hydro_hash_state *) ALLOC_RESOURCE(gen_hash_state_t, s);
+      (hydro_hash_state *) ALLOC_RESOURCE(hydro_hash_state_t, s);
 
   if (!state) {
     return OOM_ERROR(env);
@@ -256,7 +261,7 @@ enif_hydro_hash_update(ErlNifEnv * env, int argc,
   hydro_hash_state *state;
 
   if ((2 != argc)
-      || (!GET_RESOURCE(env, argv[0], gen_hash_state_t, (void **)&state))
+      || (!GET_RESOURCE(env, argv[0], hydro_hash_state_t, (void **)&state))
       || (!GET_BIN(env, argv[1], &m))) {
     return BADARG(env);
   }
@@ -279,7 +284,7 @@ enif_hydro_hash_final(ErlNifEnv * env, int argc,
   if ((2 != argc)
       || !IS_NUM(env, argv[0])
       || (!MK_UINT(env, argv[0], &s))
-      || (!GET_RESOURCE(env, argv[1], gen_hash_state_t, (void **)&state))) {
+      || (!GET_RESOURCE(env, argv[1], hydro_hash_state_t, (void **)&state))) {
     return BADARG(env);
   }
 
@@ -307,6 +312,8 @@ static ErlNifFunc nif_funcs[] = {
 	 enif_hydro_random_u32, ERL_NIF_DIRTY_JOB_CPU_BOUND},
   {"hydro_random_uniform", 1,
 	 enif_hydro_random_uniform, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+  {"hydro_random_ratchet", 0,
+	 enif_hydro_random_ratchet, ERL_NIF_DIRTY_JOB_CPU_BOUND},
   {"hydro_hash_keygen", 0,
 	 enif_hydro_hash_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
   {"hydro_hash_hash", 4,
@@ -317,8 +324,6 @@ static ErlNifFunc nif_funcs[] = {
 	 enif_hydro_hash_update, ERL_NIF_DIRTY_JOB_CPU_BOUND},
   {"hydro_hash_final", 2,
 	 enif_hydro_hash_final, ERL_NIF_DIRTY_JOB_CPU_BOUND}
-
-
 };
 
 ERL_NIF_INIT(hydro_api, nif_funcs, &hydro_load, NULL, &hydro_upgrade, &hydro_unload);
