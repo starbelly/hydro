@@ -46,7 +46,7 @@
 #define LT_OR_EQ(arg1, arg2) arg1 <= arg2
 #define GT_OR_EQ(arg1, arg2) arg1 >= arg2
 #define IN_RANGE(arg1, arg2, arg3) (LT_OR_EQ(arg2, arg1) && GT_OR_EQ(arg2, arg1))
-#define NOT_IN_RANGE(arg1, arg2, arg3) (LT_OR_EQ(arg1, arg2) && GT_OR_EQ(arg1, arg2))
+#define NOT_IN_RANGE(arg1, arg2, arg3) (LT_OR_EQ(arg1, arg2) || GT_OR_EQ(arg1, arg3))
 
 
 #define HASH_STATE_NAME "hydro_hash_state"
