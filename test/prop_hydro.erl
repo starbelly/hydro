@@ -25,54 +25,51 @@ prop_dice() ->
 
 
 prop_hash() ->
-    ?FORALL({Context, Msg, Key, Size}, {binary(8), non_empty(binary(24)),
-                                        non_empty(binary(32)),
-                               range(32,65535)},
+    ?FORALL({Context, Msg, Key}, {binary(8), non_empty(binary(24)),
+                                        non_empty(binary(32))},
             begin
-                {ok, Bin} = hydro:hash(Context, Msg, Size, Key),
+                {ok, Bin} = hydro:hash(Context, Msg, Key),
                 true = is_binary(Bin)
             end).
 
 prop_hash_multi() ->
-    ?FORALL({Context, Key, Msg1, Msg2, Size1, Size2}, {binary(8),
-                                                       non_empty(binary(32)), non_empty(binary(32)),
-                                      non_empty(binary(24)), range(32,65535), range(32,65535)},
+    ?FORALL({Context, Key, Msg1, Msg2}, {binary(8), non_empty(binary(32)),
+                                         non_empty(binary(32)),
+                                         non_empty(binary(24))},
             begin
-                {ok, Ref} = hydro:hash_init(Context, Size1, Key),
+                {ok, Ref} = hydro:hash_init(Context, Key),
                 true = is_reference(Ref),
-                {ok, true} = hydro:hash_update(Ref, Msg1),
-                {ok, true} = hydro:hash_update(Ref, Msg2),
-                {ok, Hash1} = hydro:hash_final(Ref, Size2),
+                {ok, Ref1} = hydro:hash_update(Ref, Msg1),
+                {ok, Ref2} = hydro:hash_update(Ref1, Msg2),
+                {ok, Hash1} = hydro:hash_final(Ref2),
                 true = is_binary(Hash1),
-                {ok, Ref1} = hydro:hash_init(Context, Size1, Key),
+                {ok, Ref3} = hydro:hash_init(Context, Key),
                 true = is_reference(Ref1),
-                {ok, true} = hydro:hash_update(Ref1, Msg1),
-                {ok, true} = hydro:hash_update(Ref1, Msg2),
-                {ok, Hash2} = hydro:hash_final(Ref1, Size2),
+                {ok, Ref4} = hydro:hash_update(Ref3, Msg1),
+                {ok, Ref5} = hydro:hash_update(Ref4, Msg2),
+                {ok, Hash2} = hydro:hash_final(Ref5),
                 true = is_binary(Hash2),
                 equals(Hash1, Hash2)
             end).
 
 prop_hash_multi_keyless() ->
-    ?FORALL({Context, Msg1, Msg2, Size1, Size2}, {binary(8), non_empty(binary(32)),
-                                      non_empty(binary(24)), range(32,65535), range(32,65535)},
+    ?FORALL({Context, Msg1, Msg2}, {binary(8), non_empty(binary(32)),
+                                      non_empty(binary(24))},
             begin
-                {ok, Ref} = hydro:hash_init(Context, Size1),
+                {ok, Ref} = hydro:hash_init(Context),
                 true = is_reference(Ref),
-                {ok, true} = hydro:hash_update(Ref, Msg1),
-                {ok, true} = hydro:hash_update(Ref, Msg2),
-                {ok, Hash1} = hydro:hash_final(Ref, Size2),
+                {ok, Ref1} = hydro:hash_update(Ref, Msg1),
+                {ok, Ref2} = hydro:hash_update(Ref1, Msg2),
+                {ok, Hash1} = hydro:hash_final(Ref2),
                 true = is_binary(Hash1),
-                {ok, Ref1} = hydro:hash_init(Context, Size1),
+                {ok, Ref3} = hydro:hash_init(Context),
                 true = is_reference(Ref1),
-                {ok, true} = hydro:hash_update(Ref1, Msg1),
-                {ok, true} = hydro:hash_update(Ref1, Msg2),
-                {ok, Hash2} = hydro:hash_final(Ref1, Size2),
+                {ok, Ref4} = hydro:hash_update(Ref3, Msg1),
+                {ok, Ref5} = hydro:hash_update(Ref4, Msg2),
+                {ok, Hash2} = hydro:hash_final(Ref5),
                 true = is_binary(Hash2),
                 equals(Hash1, Hash2)
             end).
-
-
 
 %%%%%%%%%%%%%%%
 %%% Helpers %%%

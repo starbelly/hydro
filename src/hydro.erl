@@ -4,7 +4,8 @@
 
 -export([rand/1, rand_uniform/1, dice/0]).
 
--export([hash_keygen/0, hash/3, hash/4, hash_init/2, hash_init/3, hash_update/2, hash_final/2]).
+-export([hash_keygen/0, hash/2, hash/3, hash_init/1, hash_init/2, hash_update/2,
+         hash_final/1]).
 
 -spec rand(non_neg_integer()) -> binary().
 rand(N) when N >= 0 ->
@@ -25,46 +26,42 @@ hash_keygen() ->
 %% The hash4 function returns a computed fixed-length finger print (hash)
 %% using the supplied context, message, key, and size. Size must be between 32 and 65535.
 %% @end
--spec hash(binary(), binary(), integer()) -> {ok, binary()} | {error,term()}.
-hash(Context, Msg, Size) when is_binary(Msg)
-                         andalso  is_binary(Msg)
-                         andalso is_integer(Size)  ->
-    hydro_api:hash_hash(Size, Msg, Context).
+-spec hash(binary(), binary()) -> {ok, binary()} | {error,term()}.
+hash(Context, Msg) when is_binary(Msg)
+                         andalso  is_binary(Msg) ->
+    hydro_api:hash_hash(Msg, Context).
 
 %% @doc
 %% The hash4 function returns a computed fixed-length finger print (hash)
 %% using the supplied context, message, key, and size. Size must be between 32 and 65535.
 %% @end
--spec hash(binary(), binary(), integer(), binary()) -> {ok, binary()} | {error,term()}.
-hash(Context, Msg, Size, Key) when is_binary(Msg)
+-spec hash(binary(), binary(), binary()) -> {ok, binary()} | {error,term()}.
+hash(Context, Msg, Key) when is_binary(Msg)
                               andalso is_binary(Msg)
-                              andalso is_integer(Size)
                               andalso  is_binary(Key) ->
-    hydro_api:hash_hash(Size, Msg, Context, Key).
+    hydro_api:hash_hash(Msg, Context, Key).
 
 %% @doc
-%% The hash_init/2 initializes state of `Context' context and size `Size' with no key for a multi-part hash
+%% The hash_init/2 initializes state of `Context' context with no key for a multi-part hash
 %% operation. Updates to the state may be perfomed using returned reference and hash_update/2
 %% @end
--spec hash_init(binary(), integer()) -> {ok, reference()} | {error, term()}.
-hash_init(Context, Size) when is_binary(Context)
-                         andalso is_integer(Size) ->
-    hydro_api:hash_init(Size, Context).
+-spec hash_init(binary()) -> {ok, reference()} | {error, term()}.
+hash_init(Context) when is_binary(Context) ->
+    hydro_api:hash_init(Context).
 
 %% @doc
 %% The hash_init/2 initializes state with a context of `Context', size `Size', and key `Key' for a multi-part hash
 %% operation. Updates to the state may be perfomed using returned reference and hash_update/2
 %% @end
--spec hash_init(binary(), integer(), binary()) -> {ok, reference()} | {error, term()}.
-hash_init(Context, Size, Key) when is_binary(Context) 
-                              andalso is_integer(Size)
-                              andalso is_binary(Key) ->
-    hydro_api:hash_init(Size, Context, Key).
+-spec hash_init(binary(), binary()) -> {ok, reference()} | {error, term()}.
+hash_init(Context, Key) when is_binary(Context) 
+                        andalso is_binary(Key) ->
+    hydro_api:hash_init(Context, Key).
 
 %% @doc
 %% The hash_update/2 updates the referenced state with the supplied message.
 %% @end
--spec hash_update(reference(), binary()) -> ok | {error, term()}.
+-spec hash_update(reference(), binary()) -> {ok, reference()} | {error, term()}.
 hash_update(State, Msg) when is_reference(State)
                         andalso is_binary(Msg) ->
     hydro_api:hash_update(State, Msg).
@@ -73,10 +70,9 @@ hash_update(State, Msg) when is_reference(State)
 %% The hash_final/2 functions returns a complete hash given a reference to a
 %% hash state and an output size.
 %% @end
--spec hash_final(reference(), integer()) -> {ok, binary()} | {error, term()}.
-hash_final(State, Size) when is_reference(State) 
-                        andalso is_integer(Size) ->
-    hydro_api:hash_final(Size, State).
+-spec hash_final(reference()) -> {ok, binary()} | {error, term()}.
+hash_final(State) when is_reference(State) -> 
+    hydro_api:hash_final(State).
 
 -spec dice() -> integer().
 dice() -> 
