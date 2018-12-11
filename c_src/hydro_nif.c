@@ -266,7 +266,7 @@ enif_hydro_hash_init(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 
 	hydro_hash_state *state =
 	    (hydro_hash_state *) ALLOC_RESOURCE(hydro_hash_state_t,
-						sizeof(hydro_hash_state));
+						sizeof(struct hydro_hash_state));
 
 	if (!state) {
 		return OOM_ERROR(env);
@@ -296,13 +296,22 @@ enif_hydro_hash_update(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 		return BADARG(env);
 	}
 
+	hydro_hash_state *new_state =
+	    (hydro_hash_state *) ALLOC_RESOURCE(hydro_hash_state_t,
+						sizeof(struct hydro_hash_state));
+
+	memcpy(new_state->state, state->state, sizeof(*new_state));
+
 	if (0 !=
-	    hydro_hash_update(state, (const char *)m.data,
+	    hydro_hash_update(new_state, (const char *)m.data,
 			      (unsigned long)m.size)) {
 		return ENCRYPT_FAILED_ERROR(env);
 	}
 
-	return OK_TUPLE(env, argv[0]);
+	ERL_NIF_TERM r = MK_RESOURCE(env, new_state);
+	FREE_RESOURCE(new_state);
+
+	return OK_TUPLE(env, r);
 }
 
 static ERL_NIF_TERM
