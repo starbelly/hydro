@@ -100,6 +100,16 @@ prop_random_buf_neg_int_fail() ->
     end    
   end).
 
+prop_kdf_derive_from_key() ->
+  ?FORALL({Ctx, Master, Id, Size}, {binary(8), binary(32), range(16, 65535),
+                                    range(16, 65535)},
+  begin
+    K = hydro_api:kdf_keygen(),
+    true = is_binary(K),
+    {ok, SubKey} = hydro_api:kdf_derive_from_key(Ctx, Master, Id, Size),
+    true = is_binary(SubKey)
+  end).
+
 
 %%%%%%%%%%%%%%%
 %%% Helpers %%%

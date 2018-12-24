@@ -23,7 +23,9 @@
          hash_init/2, 
          hash_update/2, 
          hash_final/1, 
-         hash_keygen/0
+         hash_keygen/0,
+         kdf_keygen/0,
+         kdf_derive_from_key/4 
         ]). 
 
 -spec bin2hex(binary()) -> binary().
@@ -58,6 +60,15 @@ hash_update(State, Msg) ->
 hash_final(State) -> 
     hydro_hash_final(State).
 
+-spec kdf_keygen() -> binary().
+kdf_keygen() -> 
+    hydro_kdf_keygen().
+
+-spec kdf_derive_from_key(binary(), binary(), integer(), integer()) -> 
+    {ok, binary()} | {error, term()}.
+kdf_derive_from_key(Ctx, Master, SubId, Size) ->
+    hydro_kdf_derive_from_key(Ctx, Master, SubId, Size).
+
 -spec random_buf(non_neg_integer()) -> binary().
 random_buf(N) when N >= 0 ->
     hydro_random_buf(N).
@@ -78,7 +89,6 @@ random_ratchet() ->
 random_u32() ->
     hydro_random_u32().
 
-
 %%% @private
 init() ->
   SoName = case code:priv_dir(?APPNAME) of
@@ -93,7 +103,6 @@ init() ->
             filename:join(Dir, ?LIBNAME)
     end,
     erlang:load_nif(SoName, 0).
-
 
 hydro_bin2hex(_Bin) -> 
     erlang:nif_error(nif_not_loaded).
@@ -111,6 +120,12 @@ hydro_hash_update(_State, _Msg) ->
     erlang:nif_error(nif_not_loaded).
 
 hydro_hash_final(_State) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_kdf_keygen() -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_kdf_derive_from_key(_Ctx, _M, _Id, _S) -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_random_buf(_requestedsize) -> 

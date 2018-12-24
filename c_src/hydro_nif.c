@@ -266,7 +266,8 @@ enif_hydro_hash_init(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 
 	hydro_hash_state *state =
 	    (hydro_hash_state *) ALLOC_RESOURCE(hydro_hash_state_t,
-						sizeof(struct hydro_hash_state));
+						sizeof(struct
+						       hydro_hash_state));
 
 	if (!state) {
 		return OOM_ERROR(env);
@@ -298,7 +299,8 @@ enif_hydro_hash_update(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 
 	hydro_hash_state *new_state =
 	    (hydro_hash_state *) ALLOC_RESOURCE(hydro_hash_state_t,
-						sizeof(struct hydro_hash_state));
+						sizeof(struct
+						       hydro_hash_state));
 
 	memcpy(new_state->state, state->state, sizeof(*new_state));
 
@@ -340,6 +342,65 @@ enif_hydro_hash_final(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	return OK_TUPLE(env, ret);
 }
 
+static ERL_NIF_TERM
+enif_hydro_kdf_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+
+	if (argc != 0) {
+		return enif_make_badarg(env);
+	}
+
+	ErlNifBinary m;
+
+	if (!enif_alloc_binary(hydro_kdf_KEYBYTES, &m)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	hydro_kdf_keygen(m.data);
+
+	return MK_BIN(env, &m);
+}
+
+static ERL_NIF_TERM
+enif_hydro_kdf_derive_from_key(ErlNifEnv * env, int argc,
+			       ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary c, m, k;
+
+	unsigned size;
+	unsigned sub_id;
+
+	if ((4 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &m))
+	    || (!enif_get_uint(env, argv[2], &sub_id))
+	    || (!enif_get_uint(env, argv[3], &size))) {
+		return BADARG(env);
+	}
+
+	if (LT(m.size, hydro_kdf_KEYBYTES)) {
+		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	if (!ALLOC_BIN(size, &k)) {
+		return OOM_ERROR(env);
+	}
+
+	if (0 !=
+	    hydro_kdf_derive_from_key(k.data, size, sub_id,
+				      (const char *)c.data, m.data)) {
+		FREE_BIN(&k);
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	return OK_TUPLE(env, MK_BIN(env, &k));
+
+}
+
 static ErlNifFunc nif_funcs[] = {
 	{"hydro_bin2hex", 1,
 	 enif_hydro_bin2hex, ERL_NIF_DIRTY_JOB_CPU_BOUND},
@@ -362,7 +423,11 @@ static ErlNifFunc nif_funcs[] = {
 	{"hydro_hash_update", 2,
 	 enif_hydro_hash_update, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_hash_final", 1,
-	 enif_hydro_hash_final, ERL_NIF_DIRTY_JOB_CPU_BOUND}
+	 enif_hydro_hash_final, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_kdf_keygen", 0,
+	 enif_hydro_kdf_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_kdf_derive_from_key", 4,
+	 enif_hydro_kdf_derive_from_key, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 };
 
 ERL_NIF_INIT(hydro_api, nif_funcs, &hydro_load, NULL, &hydro_upgrade,
