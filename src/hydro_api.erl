@@ -30,7 +30,9 @@
          secretbox_encrypt/3,
          secretbox_decrypt/3,
          secretbox_encrypt/4,
-         secretbox_decrypt/4
+         secretbox_decrypt/4,
+         secretbox_probe_create/3,
+         secretbox_probe_verify/4
         ]). 
 
 -spec bin2hex(binary()) -> binary().
@@ -92,6 +94,16 @@ secretbox_encrypt(C, M, I,  K) ->
                                                          {error, term()}.
 secretbox_decrypt(C, H, I, K) -> 
     hydro_secretbox_decrypt(C, H, I, K).
+
+-spec secretbox_probe_create(binary(), binary(), binary()) -> {ok, binary()} |
+                                                         {error, term()}.
+secretbox_probe_create(C, H, K) -> 
+    hydro_secretbox_probe_create(C, H, K).
+
+-spec secretbox_probe_verify(binary(), binary(), binary(), binary()) -> {ok, binary()} |
+                                                         {error, term()}.
+secretbox_probe_verify(C, M, K, P) -> 
+    hydro_secretbox_probe_verify(C, M, K, P).
 
 
 -spec kdf_derive_from_key(binary(), binary(), integer(), integer()) -> 
@@ -165,6 +177,12 @@ hydro_secretbox_encrypt(_C, _M, _I, _K) ->
     erlang:nif_error(nif_not_loaded).
 
 hydro_secretbox_decrypt(_C, _H, _I, _K) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_secretbox_probe_create(_C, _H, _K) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_secretbox_probe_verify(_C, _H, _K, _P) -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_random_buf(_requestedsize) -> 

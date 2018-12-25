@@ -495,6 +495,67 @@ enif_hydro_secretbox_decrypt(ErlNifEnv * env, int argc,
 	return OK_TUPLE(env, MK_BIN(env, &m));
 }
 
+static ERL_NIF_TERM
+enif_hydro_secretbox_probe_create(ErlNifEnv * env, int argc,
+				  ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary h, c, k, p;
+
+	if ((3 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &h))
+	    || (!GET_BIN(env, argv[2], &k))) {
+		return BADARG(env);
+	}
+
+	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
+		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	if (!ALLOC_BIN(hydro_secretbox_PROBEBYTES, &p)) {
+		return OOM_ERROR(env);
+	}
+
+	hydro_secretbox_probe_create(p.data, h.data, h.size,
+				     (const char *)c.data, k.data);
+
+	return MK_BIN(env, &p);
+}
+
+static ERL_NIF_TERM
+enif_hydro_secretbox_probe_verify(ErlNifEnv * env, int argc,
+				  ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary h, c, k, p;
+
+	if ((4 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &h))
+	    || (!GET_BIN(env, argv[2], &k))
+	    || (!GET_BIN(env, argv[3], &p))) {
+		return BADARG(env);
+	}
+
+	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
+		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	if (0 != hydro_secretbox_probe_verify(p.data, h.data, h.size,
+					      (const char *)c.data, k.data)) {
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	return MK_ATOM(env, ATOM_TRUE);
+}
+
 static ErlNifFunc nif_funcs[] = {
 	{"hydro_bin2hex", 1,
 	 enif_hydro_bin2hex, ERL_NIF_DIRTY_JOB_CPU_BOUND},
@@ -527,8 +588,11 @@ static ErlNifFunc nif_funcs[] = {
 	{"hydro_secretbox_encrypt", 4,
 	 enif_hydro_secretbox_encrypt, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_secretbox_decrypt", 4,
-	 enif_hydro_secretbox_decrypt, ERL_NIF_DIRTY_JOB_CPU_BOUND}
-
+	 enif_hydro_secretbox_decrypt, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_secretbox_probe_create", 3,
+	 enif_hydro_secretbox_probe_create, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_secretbox_probe_verify", 4,
+	 enif_hydro_secretbox_probe_verify, ERL_NIF_DIRTY_JOB_CPU_BOUND}
 };
 
 ERL_NIF_INIT(hydro_api, nif_funcs, &hydro_load, NULL, &hydro_upgrade,
