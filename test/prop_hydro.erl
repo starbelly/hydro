@@ -29,6 +29,14 @@ prop_keygen() ->
         is_binary(hydro:keygen(Type))
     end).
 
+prop_keygen_pair() -> 
+    ?FORALL({Type}, {elements([sign])},
+    begin
+        {ok, Pk, Sk} = hydro:keygen_pair(Type),
+        true = is_binary(Pk),
+        true = is_binary(Sk)
+    end).
+
 prop_hash() ->
     ?FORALL({Context, Msg, Key}, {binary(8), non_empty(binary(24)),
                                         non_empty(binary(32))},

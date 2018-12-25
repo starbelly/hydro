@@ -10,7 +10,13 @@
          }
        ).
 
--export([rand/1, rand_uniform/1, dice/0, keygen/1]).
+-define(KEYGEN_PAIRS,
+        #{
+          sign => sign_keygen
+         }
+       ).
+
+-export([rand/1, rand_uniform/1, dice/0, keygen/1, keygen_pair/1]).
 
 -export([hash_keygen/0, hash/2, hash/3, hash_init/1, hash_init/2, hash_update/2,
          hash_final/1]).
@@ -63,6 +69,13 @@ hash_keygen() ->
 -spec keygen(atom()) -> binary().
 keygen(KeyType) when is_atom(KeyType) ->
     case maps:get(KeyType, ?KEYGENS, none) of
+        none -> {error, unknown_key_type};
+        FunName -> hydro_api:FunName()
+    end.
+
+-spec keygen_pair(atom()) -> {ok, binary(), binary()}.
+keygen_pair(KeyPairType) when is_atom(KeyPairType) ->
+    case maps:get(KeyPairType, ?KEYGEN_PAIRS, none) of
         none -> {error, unknown_key_type};
         FunName -> hydro_api:FunName()
     end.

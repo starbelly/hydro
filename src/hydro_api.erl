@@ -8,24 +8,27 @@
 -on_load(init/0).
 
 % helpers
+-export([bin2hex/1, random_buf_deterministic/2]).
 
--export([random_buf_deterministic/2]).
-
-% rnd
+% random data generation
 -export([random_buf/1, random_u32/0, random_uniform/1, random_ratchet/0]).
 
-% generic  hashing
+% Generic  hashing
 -export([
-         bin2hex/1,
          hash_hash/2, 
          hash_hash/3, 
          hash_init/1,
          hash_init/2, 
          hash_update/2, 
          hash_final/1, 
-         hash_keygen/0,
-         kdf_keygen/0,
-         kdf_derive_from_key/4,
+         hash_keygen/0
+        ]). 
+
+% Key derivation
+-export([kdf_keygen/0, kdf_derive_from_key/4]).
+
+% Secret key crypto
+-export([         
          secretbox_keygen/0,
          secretbox_encrypt/3,
          secretbox_decrypt/3,
@@ -33,7 +36,16 @@
          secretbox_decrypt/4,
          secretbox_probe_create/3,
          secretbox_probe_verify/4
-        ]). 
+        ]).
+
+% Public key crypto
+-export([sign_keygen/0, 
+         sign_create/3, 
+         sign_verify/4,
+         sign_init/1,
+         sign_update/2, 
+         sign_final_create/2,
+         sign_final_verify/3]).
 
 -spec bin2hex(binary()) -> binary().
 bin2hex(Bin) -> 
@@ -105,6 +117,33 @@ secretbox_probe_create(C, H, K) ->
 secretbox_probe_verify(C, M, K, P) -> 
     hydro_secretbox_probe_verify(C, M, K, P).
 
+-spec sign_keygen() -> {ok, binary(), binary()}.
+sign_keygen() -> 
+    hydro_sign_keygen().
+
+-spec sign_create(binary(), binary(), binary()) -> {ok, binary()}.
+sign_create(C, M, K) -> 
+    hydro_sign_create(C, M, K).
+
+-spec sign_verify(binary(), binary(), binary(), binary()) -> boolean().
+sign_verify(C, M, S, K) -> 
+    hydro_sign_verify(C, M, S, K).
+
+-spec sign_init(binary()) -> {ok, reference()}.
+sign_init(C) -> 
+    hydro_sign_init(C).
+
+-spec sign_update(reference(), binary()) -> {ok, reference()}.
+sign_update(State, M) -> 
+    hydro_sign_update(State, M).
+
+-spec sign_final_create(reference(), binary()) -> {ok, binary()}.
+sign_final_create(State, Sk) -> 
+    hydro_sign_final_create(State, Sk).
+
+-spec sign_final_verify(reference(), binary(), binary()) -> {ok, binary()}.
+sign_final_verify(State, Sig, Pk) -> 
+    hydro_sign_final_verify(State, Sig, Pk).
 
 -spec kdf_derive_from_key(binary(), binary(), integer(), integer()) -> 
     {ok, binary()} | {error, term()}.
@@ -183,6 +222,27 @@ hydro_secretbox_probe_create(_C, _H, _K) ->
     erlang:nif_error(nif_not_loaded).
 
 hydro_secretbox_probe_verify(_C, _H, _K, _P) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_sign_keygen() -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_sign_create(_C, _M, _K) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_sign_verify(_C, _M, _S, _K) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_sign_init(_C) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_sign_update(_S, _M) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_sign_final_create(_S, _K) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_sign_final_verify(_St, _S, _K) -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_random_buf(_requestedsize) -> 

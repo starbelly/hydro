@@ -128,6 +128,33 @@ prop_secretbox() ->
   end).
 
 
+prop_public_key_single() -> 
+    ?FORALL({Ctx, Msg}, {binary(8), non_empty(binary())},
+    begin
+      {ok, Pk, Sk} = hydro_api:sign_keygen(),
+      true = is_binary(Pk),
+      true = is_binary(Sk),
+      {ok, S} = hydro_api:sign_create(Ctx, Msg, Sk),
+      true = is_binary(S),
+      true = hydro_api:sign_verify(Ctx, Msg, S, Pk)
+    end).
+
+prop_public_key_mutli() ->
+    ?FORALL({Ctx, Msg1, Msg2}, {binary(8), non_empty(binary()),
+                                non_empty(binary())},
+    begin
+      {ok, Pk, Sk} = hydro:keygen_pair(sign),
+      {ok, State} = hydro_api:sign_init(Ctx),
+      {ok, State1} = hydro_api:sign_update(State, Msg1),
+      {ok, State2} = hydro_api:sign_update(State1, Msg2),
+      {ok, Sig} = hydro_api:sign_final_create(State2, Sk),
+      Msg3 = <<Msg1/binary, Msg2/binary>>,
+      true = hydro_api:sign_verify(Ctx, Msg3, Sig, Pk),
+      {ok, State3} = hydro_api:sign_init(Ctx),
+      {ok, State4} = hydro_api:sign_update(State3, Msg1),
+      {ok, State5} = hydro_api:sign_update(State4, Msg2),
+      true = hydro_api:sign_final_verify(State5, Sig, Pk)
+    end).
 %%%%%%%%%%%%%%%
 %%% Helpers %%%
 %%%%%%%%%%%%%%%

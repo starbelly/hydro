@@ -49,19 +49,26 @@
 #define NOT_IN_RANGE(arg1, arg2, arg3) (LT_OR_EQ(arg1, arg2) || GT_OR_EQ(arg1, arg3))
 
 #define HASH_STATE_NAME "hydro_hash_state"
+#define SIGN_STATE_NAME "hydro_sign_state"
 
 static ErlNifResourceType *hydro_hash_state_t = NULL;
+static ErlNifResourceType *hydro_sign_state_t = NULL;
 
-static ErlNifResourceType *init_resource_type(ErlNifEnv * env)
+static ErlNifResourceType *init_resource_type(ErlNifEnv * env, const char *type)
 {
-	return enif_open_resource_type(env, NULL, HASH_STATE_NAME, NULL,
+	return enif_open_resource_type(env, NULL, type, NULL,
 				       ERL_NIF_RT_CREATE, NULL);
 }
 
 static int hydro_load(ErlNifEnv * env, void **priv_data, ERL_NIF_TERM load_info)
 {
-	hydro_hash_state_t = init_resource_type(env);
-	return !hydro_hash_state_t || hydro_init() == -1 ? 1 : 0;
+	hydro_hash_state_t =
+	    init_resource_type(env, (const char *)HASH_STATE_NAME);
+	hydro_sign_state_t =
+	    init_resource_type(env, (const char *)SIGN_STATE_NAME);
+
+	return !hydro_hash_state_t || !hydro_sign_state_t
+	    || hydro_init() == -1 ? 1 : 0;
 }
 
 static int
@@ -556,6 +563,209 @@ enif_hydro_secretbox_probe_verify(ErlNifEnv * env, int argc,
 	return MK_ATOM(env, ATOM_TRUE);
 }
 
+static ERL_NIF_TERM
+enif_hydro_sign_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+
+	if (argc != 0) {
+		return enif_make_badarg(env);
+	}
+
+	ErlNifBinary pk, sk;
+
+	hydro_sign_keypair kp;
+	hydro_sign_keygen(&kp);
+
+	if (!ALLOC_BIN(hydro_sign_PUBLICKEYBYTES, &pk)) {
+		return OOM_ERROR(env);
+	}
+
+	if (!ALLOC_BIN(hydro_sign_SECRETKEYBYTES, &sk)) {
+		return OOM_ERROR(env);
+	}
+
+	memmove(pk.data, kp.pk, hydro_sign_PUBLICKEYBYTES);
+	memmove(sk.data, kp.sk, hydro_sign_SECRETKEYBYTES);
+
+	return OK_TUPLE3(env, MK_BIN(env, &pk), MK_BIN(env, &sk));
+}
+
+static ERL_NIF_TERM
+enif_hydro_sign_create(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary c, m, sk, s;
+
+	if ((3 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &m))
+	    || (!GET_BIN(env, argv[2], &sk))) {
+		return BADARG(env);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	if (LT(sk.size, hydro_sign_SECRETKEYBYTES)) {
+		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	}
+
+	if (!ALLOC_BIN(hydro_sign_BYTES, &s)) {
+		return OOM_ERROR(env);
+	}
+
+	if (0 != hydro_sign_create(s.data, m.data, m.size,
+				   (const char *)c.data, sk.data)) {
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	return OK_TUPLE(env, MK_BIN(env, &s));
+}
+
+static ERL_NIF_TERM
+enif_hydro_sign_verify(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary c, m, s, pk;
+
+	if ((4 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &m))
+	    || (!GET_BIN(env, argv[2], &s))
+	    || (!GET_BIN(env, argv[3], &pk))) {
+		return BADARG(env);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	if (LT(pk.size, hydro_sign_PUBLICKEYBYTES)) {
+		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	}
+
+	if (0 != hydro_sign_verify(s.data, m.data, m.size,
+				   (const char *)c.data, pk.data)) {
+		return MK_ATOM(env, ATOM_FALSE);
+	}
+
+	return MK_ATOM(env, ATOM_TRUE);
+}
+
+static ERL_NIF_TERM
+enif_hydro_sign_init(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary c;
+
+	if ((1 != argc)
+	    || (!GET_BIN(env, argv[0], &c))) {
+		return BADARG(env);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	hydro_sign_state *state =
+	    (hydro_sign_state *) ALLOC_RESOURCE(hydro_sign_state_t,
+						sizeof(struct
+						       hydro_sign_state));
+
+	if (0 != hydro_sign_init(state, (const char *)c.data)) {
+		FREE_RESOURCE(state);
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	ERL_NIF_TERM r = MK_RESOURCE(env, state);
+	FREE_RESOURCE(state);
+
+	return OK_TUPLE(env, r);
+}
+
+static ERL_NIF_TERM
+enif_hydro_sign_update(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary m;
+	hydro_sign_state *state;
+
+	if ((2 != argc)
+	    ||
+	    (!GET_RESOURCE(env, argv[0], hydro_sign_state_t, (void **)&state))
+	    || (!GET_BIN(env, argv[1], &m))) {
+		return BADARG(env);
+	}
+
+	hydro_sign_state *new_state =
+	    (hydro_sign_state *) ALLOC_RESOURCE(hydro_sign_state_t,
+						sizeof(struct
+						       hydro_sign_state));
+
+	memcpy(&new_state->hash_st, &state->hash_st, sizeof(*new_state));
+
+	if (0 !=
+	    hydro_sign_update(new_state, (const char *)m.data,
+			      (unsigned long)m.size)) {
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	ERL_NIF_TERM r = MK_RESOURCE(env, new_state);
+	FREE_RESOURCE(new_state);
+
+	return OK_TUPLE(env, r);
+}
+
+static ERL_NIF_TERM
+enif_hydro_sign_final_create(ErlNifEnv * env, int argc,
+			     ERL_NIF_TERM const argv[])
+{
+
+	ErlNifBinary sk, s;
+	hydro_sign_state *state;
+
+	if ((2 != argc)
+	    ||
+	    (!GET_RESOURCE(env, argv[0], hydro_sign_state_t, (void **)&state))
+	    || (!GET_BIN(env, argv[1], &sk))) {
+		return BADARG(env);
+	}
+
+	if (!ALLOC_BIN(hydro_sign_BYTES, &s)) {
+		return OOM_ERROR(env);
+	}
+
+	if (0 != hydro_sign_final_create(state, s.data, sk.data)) {
+		FREE_BIN(&s);
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	ERL_NIF_TERM ret = enif_make_binary(env, &s);
+	return OK_TUPLE(env, ret);
+
+}
+
+static ERL_NIF_TERM
+enif_hydro_sign_final_verify(ErlNifEnv * env, int argc,
+			     ERL_NIF_TERM const argv[])
+{
+
+	hydro_sign_state *state;
+	ErlNifBinary s, pk;
+
+	if ((3 != argc)
+	    ||
+	    (!GET_RESOURCE(env, argv[0], hydro_sign_state_t, (void **)&state))
+	    || (!GET_BIN(env, argv[1], &s))
+	    || (!GET_BIN(env, argv[2], &pk))) {
+		return BADARG(env);
+	}
+
+	if (0 != hydro_sign_final_verify(state, s.data, pk.data)) {
+		return MK_ATOM(env, ATOM_FALSE);
+	}
+
+	return MK_ATOM(env, ATOM_TRUE);
+
+}
+
 static ErlNifFunc nif_funcs[] = {
 	{"hydro_bin2hex", 1,
 	 enif_hydro_bin2hex, ERL_NIF_DIRTY_JOB_CPU_BOUND},
@@ -592,7 +802,21 @@ static ErlNifFunc nif_funcs[] = {
 	{"hydro_secretbox_probe_create", 3,
 	 enif_hydro_secretbox_probe_create, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_secretbox_probe_verify", 4,
-	 enif_hydro_secretbox_probe_verify, ERL_NIF_DIRTY_JOB_CPU_BOUND}
+	 enif_hydro_secretbox_probe_verify, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_sign_keygen", 0,
+	 enif_hydro_sign_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_sign_create", 3,
+	 enif_hydro_sign_create, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_sign_verify", 4,
+	 enif_hydro_sign_verify, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_sign_init", 1,
+	 enif_hydro_sign_init, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_sign_update", 2,
+	 enif_hydro_sign_update, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_sign_final_create", 2,
+	 enif_hydro_sign_final_create, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_sign_final_verify", 3,
+	 enif_hydro_sign_final_verify, ERL_NIF_DIRTY_JOB_CPU_BOUND}
 };
 
 ERL_NIF_INIT(hydro_api, nif_funcs, &hydro_load, NULL, &hydro_upgrade,
