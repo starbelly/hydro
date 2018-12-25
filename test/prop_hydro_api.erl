@@ -155,6 +155,27 @@ prop_public_key_mutli() ->
       {ok, State5} = hydro_api:sign_update(State4, Msg2),
       true = hydro_api:sign_final_verify(State5, Sig, Pk)
     end).
+
+
+prop_passwords() ->
+    ?FORALL({Ctx, P}, {binary(8), non_empty(binary())},
+    begin
+      K = hydro_api:pwhash_keygen(),
+      true = is_binary(K),
+      {ok, H} = hydro_api:pwhash_create(P, K, 32, 32, 32),
+      true = hydro_api:pwhash_verify(H, P, K, 32, 32, 32),
+      {ok, Sk} = hydro_api:pwhash_derive_static_key(Ctx, H, P, K, 32, 32, 32),
+      true = is_binary(Sk),
+      K1 = hydro_api:pwhash_keygen(),
+      {ok, H1} = hydro_api:pwhash_reencrypt(H, K, K1),
+      true = is_binary(H1),
+      true = hydro_api:pwhash_verify(H1, P, K1, 32, 32, 32),
+      false = hydro_api:pwhash_verify(H1, P, K, 32, 32, 32),
+      {ok, H2} = hydro_api:pwhash_upgrade(H1, K1, 64, 32, 32),
+      true = hydro_api:pwhash_verify(H2, P, K1, 64, 32, 32),
+      false == hydro_api:pwhash_verify(H2, P, K1, 32, 32, 32)
+    end).
+
 %%%%%%%%%%%%%%%
 %%% Helpers %%%
 %%%%%%%%%%%%%%%

@@ -6,7 +6,8 @@
         #{
           hash => hash_keygen,
           kdf => kdf_keygen,
-          secretbox => secretbox_keygen
+          secretbox => secretbox_keygen,
+          password => pwhash_keygen
          }
        ).
 

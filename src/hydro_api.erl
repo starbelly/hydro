@@ -47,6 +47,18 @@
          sign_final_create/2,
          sign_final_verify/3]).
 
+% Password hashing
+
+-export([
+        pwhash_keygen/0,
+        pwhash_deterministic/5,
+        pwhash_create/5,
+        pwhash_verify/6,
+        pwhash_derive_static_key/7,
+        pwhash_reencrypt/3,
+        pwhash_upgrade/5
+        ]).
+
 -spec bin2hex(binary()) -> binary().
 bin2hex(Bin) -> 
     hd(binary:split(hydro_bin2hex(Bin), <<0>>)).
@@ -83,6 +95,34 @@ hash_final(State) ->
 kdf_keygen() -> 
     hydro_kdf_keygen().
 
+-spec pwhash_keygen() -> {ok, binary()}.
+pwhash_keygen() -> 
+    hydro_pwhash_keygen().
+
+-spec pwhash_deterministic(_,_,_,_,_) -> any().
+pwhash_deterministic(C, P, Mk, S, OpsLimit) -> 
+    hydro_pwhash_deterministic(C, P, Mk, S, OpsLimit).
+
+-spec pwhash_create(_,_,_,_,_) -> any().
+pwhash_create(P, Mk, Ol, Ml, Tl) -> 
+    hydro_pwhash_create(P, Mk, Ol, Ml, Tl).
+
+-spec pwhash_verify(_,_,_,_,_,_) -> any().
+pwhash_verify(H, P, Mk, Ol, Ml, Tl) -> 
+    hydro_pwhash_verify(H, P, Mk, Ol, Ml, Tl).
+
+-spec pwhash_derive_static_key(_,_,_,_,_,_,_) -> any().
+pwhash_derive_static_key(C, H, P, Mk, Ol, Ml, Tl) -> 
+    hydro_pwhash_derive_static_key(C, H, P, Mk, Ol, Ml, Tl).
+
+-spec pwhash_reencrypt(_,_,_) -> any().
+pwhash_reencrypt(H, M, N) ->
+    hydro_pwhash_reencrypt(H, M, N).
+
+-spec pwhash_upgrade(_,_,_,_,_) -> any().
+pwhash_upgrade(H, M, Ol, Ml, Tl) ->
+    hydro_pwhash_upgrade(H, M, Ol, Ml, Tl).
+
 -spec secretbox_keygen() -> binary().
 secretbox_keygen() -> 
     hydro_secretbox_keygen().
@@ -97,8 +137,8 @@ secretbox_encrypt(C, M, K) ->
 secretbox_decrypt(C, H, K) -> 
     hydro_secretbox_decrypt(C, H, 0, K).
 
--spec secretbox_encrypt(binary(), binary(), integer(), binary()) -> {ok, binary()} |
-                                                         {error, term()}.
+-spec secretbox_encrypt(binary(), binary(), integer(), binary()) -> 
+    {ok, binary()} | {error, term()}.
 secretbox_encrypt(C, M, I,  K) -> 
     hydro_secretbox_encrypt(C, M, I, K).
 
@@ -207,6 +247,27 @@ hydro_kdf_keygen() ->
     erlang:nif_error(nif_not_loaded).
 
 hydro_kdf_derive_from_key(_Ctx, _M, _Id, _S) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_pwhash_keygen() -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_pwhash_deterministic(_C, _P, _Mk, _S, _Ol) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_pwhash_create( _P, _Mk, _Ol, _Ml, _Tl) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_pwhash_verify(_H, _P, _Mk, _Ol, _Ml, _Tl) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_pwhash_derive_static_key(_C, _H, _P, _Mk, _Ol, _Ml, _Tl) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_pwhash_reencrypt(_H, _Mk, _Nmk) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_pwhash_upgrade(_H, _Mk, _Ol, _Ml, _Tl) -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_secretbox_keygen() -> 

@@ -409,6 +409,210 @@ enif_hydro_kdf_derive_from_key(ErlNifEnv * env, int argc,
 }
 
 static ERL_NIF_TERM
+enif_hydro_pwhash_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+
+	if (argc != 0) {
+		return enif_make_badarg(env);
+	}
+
+	ErlNifBinary mk;
+
+	if (!enif_alloc_binary(hydro_pwhash_MASTERKEYBYTES, &mk)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	hydro_pwhash_keygen(mk.data);
+
+	return MK_BIN(env, &mk);
+}
+
+static ERL_NIF_TERM
+enif_hydro_pwhash_deterministic(ErlNifEnv * env, int argc,
+				ERL_NIF_TERM const argv[])
+{
+
+	ErlNifBinary h, c, p, mk;
+
+	unsigned size;
+	unsigned ops_limit;
+
+	if ((5 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &p))
+	    || (!GET_BIN(env, argv[2], &mk))
+	    || (!enif_get_uint(env, argv[3], &size))
+	    || (!enif_get_uint(env, argv[4], &ops_limit))) {
+		return BADARG(env);
+	}
+
+	if (!enif_alloc_binary(size, &h)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	hydro_pwhash_deterministic(h.data, h.size, (const char *)p.data, p.size,
+				   (const char *)c.data, mk.data, ops_limit, 0,
+				   1);
+
+	return OK_TUPLE(env, MK_BIN(env, &h));
+}
+
+static ERL_NIF_TERM
+enif_hydro_pwhash_create(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+
+	unsigned ops_limit;
+	unsigned mem_limit;
+	unsigned threads;
+
+	ErlNifBinary h, p, mk;
+
+	if ((5 != argc)
+	    || (!GET_BIN(env, argv[0], &p))
+	    || (!GET_BIN(env, argv[1], &mk))
+	    || (!enif_get_uint(env, argv[2], &ops_limit))
+	    || (!enif_get_uint(env, argv[3], &mem_limit))
+	    || (!enif_get_uint(env, argv[4], &threads))) {
+		return BADARG(env);
+	}
+
+	if (!enif_alloc_binary(hydro_pwhash_STOREDBYTES, &h)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	hydro_pwhash_create(h.data, (const char *)p.data, p.size,
+			    mk.data, ops_limit, mem_limit, threads);
+
+	return OK_TUPLE(env, MK_BIN(env, &h));
+}
+
+static ERL_NIF_TERM
+enif_hydro_pwhash_verify(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+
+	unsigned ops_limit;
+	unsigned mem_limit;
+	unsigned threads;
+
+	ErlNifBinary h, p, mk;
+
+	if ((6 != argc)
+	    || (!GET_BIN(env, argv[0], &h))
+	    || (!GET_BIN(env, argv[1], &p))
+	    || (!GET_BIN(env, argv[2], &mk))
+	    || (!enif_get_uint(env, argv[3], &ops_limit))
+	    || (!enif_get_uint(env, argv[4], &mem_limit))
+	    || (!enif_get_uint(env, argv[5], &threads))) {
+		return BADARG(env);
+	}
+
+	if (0 != hydro_pwhash_verify(h.data, (const char *)p.data, p.size,
+				     mk.data, ops_limit, mem_limit, threads)) {
+		return MK_ATOM(env, ATOM_FALSE);
+	}
+
+	return MK_ATOM(env, ATOM_TRUE);
+}
+
+static ERL_NIF_TERM
+enif_hydro_pwhash_derive_static_key(ErlNifEnv * env, int argc,
+				    ERL_NIF_TERM const argv[])
+{
+
+	unsigned ops_limit;
+	unsigned mem_limit;
+	unsigned threads;
+
+	ErlNifBinary c, h, p, mk, sk;
+
+	if ((7 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &h))
+	    || (!GET_BIN(env, argv[2], &p))
+	    || (!GET_BIN(env, argv[3], &mk))
+	    || (!enif_get_uint(env, argv[4], &ops_limit))
+	    || (!enif_get_uint(env, argv[5], &mem_limit))
+	    || (!enif_get_uint(env, argv[6], &threads))) {
+		return BADARG(env);
+	}
+
+	if (!enif_alloc_binary(64, &sk)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	if (0 !=
+	    hydro_pwhash_derive_static_key(sk.data, sk.size, h.data,
+					   (const char *)p.data, p.size,
+					   (const char *)c.data, mk.data,
+					   ops_limit, mem_limit, threads)) {
+		return hydro_error(env, "deriv_failed");
+	}
+
+	return OK_TUPLE(env, MK_BIN(env, &sk));
+}
+
+static ERL_NIF_TERM
+enif_hydro_pwhash_reencrypt(ErlNifEnv * env, int argc,
+			    ERL_NIF_TERM const argv[])
+{
+
+	ErlNifBinary h1, h, mk, nmk;
+
+	if ((3 != argc)
+	    || (!GET_BIN(env, argv[0], &h))
+	    || (!GET_BIN(env, argv[1], &mk))
+	    || (!GET_BIN(env, argv[2], &nmk))) {
+		return BADARG(env);
+	}
+
+	if (!enif_alloc_binary(h.size, &h1)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	memcpy(h1.data, h.data, h.size);
+
+	if (0 != hydro_pwhash_reencrypt(h1.data, mk.data, nmk.data)) {
+		return hydro_error(env, "incorrect_key");
+	}
+
+	return OK_TUPLE(env, MK_BIN(env, &h1));
+}
+
+static ERL_NIF_TERM
+enif_hydro_pwhash_upgrade(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+
+	unsigned ops_limit;
+	unsigned mem_limit;
+	unsigned threads;
+
+	ErlNifBinary h1, h, mk;
+
+	if ((5 != argc)
+	    || (!GET_BIN(env, argv[0], &h))
+	    || (!GET_BIN(env, argv[1], &mk))
+	    || (!enif_get_uint(env, argv[2], &ops_limit))
+	    || (!enif_get_uint(env, argv[3], &mem_limit))
+	    || (!enif_get_uint(env, argv[4], &threads))) {
+		return BADARG(env);
+	}
+
+	if (!enif_alloc_binary(h.size, &h1)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	memcpy(h1.data, h.data, h.size);
+
+	if (0 !=
+	    hydro_pwhash_upgrade(h1.data, mk.data, ops_limit, mem_limit,
+				 threads)) {
+		return hydro_error(env, "incorrect_key");
+	}
+
+	return OK_TUPLE(env, MK_BIN(env, &h1));
+}
+
+static ERL_NIF_TERM
 enif_hydro_secretbox_keygen(ErlNifEnv * env, int argc,
 			    ERL_NIF_TERM const argv[])
 {
@@ -469,6 +673,7 @@ static ERL_NIF_TERM
 enif_hydro_secretbox_decrypt(ErlNifEnv * env, int argc,
 			     ERL_NIF_TERM const argv[])
 {
+
 	unsigned msg_id;
 	ErlNifBinary h, c, m, k;
 
@@ -793,6 +998,20 @@ static ErlNifFunc nif_funcs[] = {
 	 enif_hydro_kdf_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_kdf_derive_from_key", 4,
 	 enif_hydro_kdf_derive_from_key, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_pwhash_keygen", 0,
+	 enif_hydro_pwhash_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_pwhash_deterministic", 5,
+	 enif_hydro_pwhash_deterministic, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_pwhash_create", 5,
+	 enif_hydro_pwhash_create, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_pwhash_verify", 6,
+	 enif_hydro_pwhash_verify, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_pwhash_derive_static_key", 7,
+	 enif_hydro_pwhash_derive_static_key, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_pwhash_reencrypt", 3,
+	 enif_hydro_pwhash_reencrypt, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_pwhash_upgrade", 5,
+	 enif_hydro_pwhash_upgrade, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_secretbox_keygen", 0,
 	 enif_hydro_secretbox_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_secretbox_encrypt", 4,

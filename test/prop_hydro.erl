@@ -24,7 +24,7 @@ prop_dice() ->
   end).
 
 prop_keygen() -> 
-    ?FORALL({Type}, {elements([hash, kdf, secretbox])},
+    ?FORALL({Type}, {elements([hash, kdf, secretbox, password])},
     begin
         is_binary(hydro:keygen(Type))
     end).
