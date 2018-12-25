@@ -401,6 +401,100 @@ enif_hydro_kdf_derive_from_key(ErlNifEnv * env, int argc,
 
 }
 
+static ERL_NIF_TERM
+enif_hydro_secretbox_keygen(ErlNifEnv * env, int argc,
+			    ERL_NIF_TERM const argv[])
+{
+
+	if (argc != 0) {
+		return enif_make_badarg(env);
+	}
+
+	ErlNifBinary k;
+
+	if (!enif_alloc_binary(hydro_secretbox_KEYBYTES, &k)) {
+		return hydro_error(env, "alloc_failed");
+	}
+
+	hydro_kdf_keygen(k.data);
+
+	return MK_BIN(env, &k);
+}
+
+static ERL_NIF_TERM
+enif_hydro_secretbox_encrypt(ErlNifEnv * env, int argc,
+			     ERL_NIF_TERM const argv[])
+{
+	ErlNifBinary h, c, m, k;
+	unsigned msg_id;
+
+	if ((4 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &m))
+	    || (!enif_get_uint(env, argv[2], &msg_id))
+	    || (!GET_BIN(env, argv[3], &k))) {
+		return BADARG(env);
+	}
+
+	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
+		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	if (!ALLOC_BIN(hydro_secretbox_HEADERBYTES + m.size, &h)) {
+		return OOM_ERROR(env);
+	}
+
+	if (0 !=
+	    hydro_secretbox_encrypt(h.data, m.data, m.size, msg_id,
+				    (const char *)c.data, k.data)) {
+		FREE_BIN(&h);
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	return OK_TUPLE(env, MK_BIN(env, &h));
+}
+
+static ERL_NIF_TERM
+enif_hydro_secretbox_decrypt(ErlNifEnv * env, int argc,
+			     ERL_NIF_TERM const argv[])
+{
+	unsigned msg_id;
+	ErlNifBinary h, c, m, k;
+
+	if ((4 != argc)
+	    || (!GET_BIN(env, argv[0], &c))
+	    || (!GET_BIN(env, argv[1], &h))
+	    || (!enif_get_uint(env, argv[2], &msg_id))
+	    || (!GET_BIN(env, argv[3], &k))) {
+		return BADARG(env);
+	}
+
+	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
+		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	}
+
+	if (c.size != hydro_hash_CONTEXTBYTES) {
+		return ERROR(env, ATOM_BAD_CTX_SIZE);
+	}
+
+	if (!ALLOC_BIN(h.size - hydro_secretbox_HEADERBYTES, &m)) {
+		return OOM_ERROR(env);
+	}
+
+	if (0 !=
+	    hydro_secretbox_decrypt(m.data, h.data, h.size, msg_id,
+				    (const char *)c.data, k.data)) {
+		FREE_BIN(&h);
+		return ENCRYPT_FAILED_ERROR(env);
+	}
+
+	return OK_TUPLE(env, MK_BIN(env, &m));
+}
+
 static ErlNifFunc nif_funcs[] = {
 	{"hydro_bin2hex", 1,
 	 enif_hydro_bin2hex, ERL_NIF_DIRTY_JOB_CPU_BOUND},
@@ -428,6 +522,13 @@ static ErlNifFunc nif_funcs[] = {
 	 enif_hydro_kdf_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_kdf_derive_from_key", 4,
 	 enif_hydro_kdf_derive_from_key, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_secretbox_keygen", 0,
+	 enif_hydro_secretbox_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_secretbox_encrypt", 4,
+	 enif_hydro_secretbox_encrypt, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_secretbox_decrypt", 4,
+	 enif_hydro_secretbox_decrypt, ERL_NIF_DIRTY_JOB_CPU_BOUND}
+
 };
 
 ERL_NIF_INIT(hydro_api, nif_funcs, &hydro_load, NULL, &hydro_upgrade,

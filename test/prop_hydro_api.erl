@@ -110,6 +110,21 @@ prop_kdf_derive_from_key() ->
     true = is_binary(SubKey)
   end).
 
+prop_secretbox() ->
+  ?FORALL({Ctx, Msg, Id}, {binary(8), non_empty(binary()), range(0, 65535)},
+  begin
+    K = hydro_api:kdf_keygen(),
+    true = is_binary(K),
+    {ok, H} = hydro_api:secretbox_encrypt(Ctx, Msg, K),
+    true = is_binary(H),
+    {ok, Deciphered} = hydro_api:secretbox_decrypt(Ctx, H, K),
+    equals(Msg, Deciphered),
+    {ok, H1} = hydro_api:secretbox_encrypt(Ctx, Msg, Id, K),
+    true = is_binary(H1),
+    {ok, Deciphered1} = hydro_api:secretbox_decrypt(Ctx, H1, Id, K),
+    equals(Msg, Deciphered1)
+  end).
+
 
 %%%%%%%%%%%%%%%
 %%% Helpers %%%

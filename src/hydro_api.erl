@@ -25,7 +25,12 @@
          hash_final/1, 
          hash_keygen/0,
          kdf_keygen/0,
-         kdf_derive_from_key/4 
+         kdf_derive_from_key/4,
+         secretbox_keygen/0,
+         secretbox_encrypt/3,
+         secretbox_decrypt/3,
+         secretbox_encrypt/4,
+         secretbox_decrypt/4
         ]). 
 
 -spec bin2hex(binary()) -> binary().
@@ -63,6 +68,31 @@ hash_final(State) ->
 -spec kdf_keygen() -> binary().
 kdf_keygen() -> 
     hydro_kdf_keygen().
+
+-spec secretbox_keygen() -> binary().
+secretbox_keygen() -> 
+    hydro_secretbox_keygen().
+
+-spec secretbox_encrypt(binary(), binary(), binary()) -> {ok, binary()} |
+                                                         {error, term()}.
+secretbox_encrypt(C, M, K) -> 
+    hydro_secretbox_encrypt(C, M, 0, K).
+
+-spec secretbox_decrypt(binary(), binary(), binary()) -> {ok, binary()} |
+                                                         {error, term()}.
+secretbox_decrypt(C, H, K) -> 
+    hydro_secretbox_decrypt(C, H, 0, K).
+
+-spec secretbox_encrypt(binary(), binary(), integer(), binary()) -> {ok, binary()} |
+                                                         {error, term()}.
+secretbox_encrypt(C, M, I,  K) -> 
+    hydro_secretbox_encrypt(C, M, I, K).
+
+-spec secretbox_decrypt(binary(), binary(), integer(), binary()) -> {ok, binary()} |
+                                                         {error, term()}.
+secretbox_decrypt(C, H, I, K) -> 
+    hydro_secretbox_decrypt(C, H, I, K).
+
 
 -spec kdf_derive_from_key(binary(), binary(), integer(), integer()) -> 
     {ok, binary()} | {error, term()}.
@@ -126,6 +156,15 @@ hydro_kdf_keygen() ->
     erlang:nif_error(nif_not_loaded).
 
 hydro_kdf_derive_from_key(_Ctx, _M, _Id, _S) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_secretbox_keygen() -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_secretbox_encrypt(_C, _M, _I, _K) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_secretbox_decrypt(_C, _H, _I, _K) -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_random_buf(_requestedsize) -> 

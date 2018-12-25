@@ -2,10 +2,48 @@
 %%% @end.
 -module(hydro).
 
--export([rand/1, rand_uniform/1, dice/0]).
+-define(KEYGENS,
+        #{
+          hash => hash_keygen,
+          kdf => kdf_keygen,
+          secretbox => secretbox_keygen
+         }
+       ).
+
+-export([rand/1, rand_uniform/1, dice/0, keygen/1]).
 
 -export([hash_keygen/0, hash/2, hash/3, hash_init/1, hash_init/2, hash_update/2,
          hash_final/1]).
+
+-export([box_seal/2, box_open/3, box_seal/3, box_open/4]).
+
+-spec box_seal(binary(), binary()) -> 
+    {ok, binary(), binary()} | {error, term()}.
+box_seal(C, M) -> 
+    K = hydro_api:secretbox_keygen(),
+    case hydro_api:secretbox_encrypt(C, M, K) of 
+        {ok, H} -> {ok, H, K};
+        {error, _} = Err -> Err
+    end.
+
+-spec box_open(binary(), binary(), binary()) -> 
+    {ok, binary()} | {error, term()}.
+box_open(C, H, K) -> 
+    hydro_api:secretbox_decrypt(C, H, K).
+
+-spec box_seal(binary(), binary(), integer()) -> 
+    {ok, binary(), binary()} | {error, term()}.
+box_seal(C, M, I) -> 
+    K = hydro_api:secretbox_keygen(),
+    case hydro_api:secretbox_encrypt(C, M, I, K) of 
+        {ok, H} -> {ok, H, K};
+        {error, _} = Err -> Err
+    end.
+
+-spec box_open(binary(), binary(), integer(), binary()) -> 
+    {ok, binary()} | {error, term()}.
+box_open(C, H, I, K) -> 
+    hydro_api:secretbox_decrypt(C, H, I, K).
 
 -spec rand(non_neg_integer()) -> binary().
 rand(N) when N >= 0 ->
@@ -21,6 +59,13 @@ rand_uniform(N) when N >= 0 ->
 -spec hash_keygen() -> binary().
 hash_keygen() -> 
     hydro_api:hash_keygen().
+
+-spec keygen(atom()) -> binary().
+keygen(KeyType) when is_atom(KeyType) ->
+    case maps:get(KeyType, ?KEYGENS, none) of
+        none -> {error, unknown_key_type};
+        FunName -> hydro_api:FunName()
+    end.
 
 %% @doc
 %% The hash4 function returns a computed fixed-length finger print (hash)

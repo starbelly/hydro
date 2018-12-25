@@ -23,6 +23,11 @@ prop_dice() ->
     is_integer(hydro:dice())
   end).
 
+prop_keygen() -> 
+    ?FORALL({Type}, {elements([hash, kdf, secretbox])},
+    begin
+        is_binary(hydro:keygen(Type))
+    end).
 
 prop_hash() ->
     ?FORALL({Context, Msg, Key}, {binary(8), non_empty(binary(24)),
@@ -70,6 +75,22 @@ prop_hash_multi_keyless() ->
                 true = is_binary(Hash2),
                 equals(Hash1, Hash2)
             end).
+
+prop_box() ->
+  ?FORALL({Ctx, Msg, Id}, {binary(8), non_empty(binary()), range(16, 65535)},
+  begin
+    {ok, H, K} = hydro:box_seal(Ctx, Msg),
+    true = is_binary(H),
+    true = is_binary(K),
+    {ok, Deciphered} = hydro:box_open(Ctx, H, K),
+    equals(Msg, Deciphered),
+    {ok, H1, K1} = hydro:box_seal(Ctx, Msg, Id),
+    true = is_binary(H1),
+    true = is_binary(K1),
+    {ok, Deciphered1} = hydro:box_open(Ctx, H1, Id, K1),
+    equals(Msg, Deciphered1)
+  end).
+
 
 %%%%%%%%%%%%%%%
 %%% Helpers %%%
