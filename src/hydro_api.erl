@@ -48,7 +48,6 @@
          sign_final_verify/3]).
 
 % Password hashing
-
 -export([
         pwhash_keygen/0,
         pwhash_deterministic/5,
@@ -58,6 +57,11 @@
         pwhash_reencrypt/3,
         pwhash_upgrade/5
         ]).
+
+
+-export([
+        kx_keygen/0
+       ]).
 
 -spec bin2hex(binary()) -> binary().
 bin2hex(Bin) -> 
@@ -122,6 +126,10 @@ pwhash_reencrypt(H, M, N) ->
 -spec pwhash_upgrade(_,_,_,_,_) -> any().
 pwhash_upgrade(H, M, Ol, Ml, Tl) ->
     hydro_pwhash_upgrade(H, M, Ol, Ml, Tl).
+
+-spec kx_keygen() -> {ok, binary(), binary()}.
+kx_keygen() -> 
+    hydro_kx_keygen().
 
 -spec secretbox_keygen() -> binary().
 secretbox_keygen() -> 
@@ -268,6 +276,9 @@ hydro_pwhash_reencrypt(_H, _Mk, _Nmk) ->
     erlang:nif_error(nif_not_loaded).
 
 hydro_pwhash_upgrade(_H, _Mk, _Ol, _Ml, _Tl) -> 
+    erlang:nif_error(nif_not_loaded).
+
+hydro_kx_keygen() -> 
     erlang:nif_error(nif_not_loaded).
 
 hydro_secretbox_keygen() -> 

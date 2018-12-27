@@ -613,6 +613,33 @@ enif_hydro_pwhash_upgrade(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 }
 
 static ERL_NIF_TERM
+enif_hydro_kx_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
+{
+	if (argc != 0) {
+		return enif_make_badarg(env);
+	}
+
+	ErlNifBinary pk, sk;
+
+	hydro_kx_keypair kp;
+
+	hydro_kx_keygen(&kp);
+
+	if (!ALLOC_BIN(hydro_kx_PUBLICKEYBYTES, &pk)) {
+		return OOM_ERROR(env);
+	}
+
+	if (!ALLOC_BIN(hydro_kx_SECRETKEYBYTES, &sk)) {
+		return OOM_ERROR(env);
+	}
+
+	memmove(pk.data, kp.pk, hydro_kx_PUBLICKEYBYTES);
+	memmove(sk.data, kp.sk, hydro_kx_SECRETKEYBYTES);
+
+	return OK_TUPLE3(env, MK_BIN(env, &pk), MK_BIN(env, &sk));
+}
+
+static ERL_NIF_TERM
 enif_hydro_secretbox_keygen(ErlNifEnv * env, int argc,
 			    ERL_NIF_TERM const argv[])
 {
@@ -1012,6 +1039,8 @@ static ErlNifFunc nif_funcs[] = {
 	 enif_hydro_pwhash_reencrypt, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_pwhash_upgrade", 5,
 	 enif_hydro_pwhash_upgrade, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+	{"hydro_kx_keygen", 0,
+	 enif_hydro_kx_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_secretbox_keygen", 0,
 	 enif_hydro_secretbox_keygen, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 	{"hydro_secretbox_encrypt", 4,

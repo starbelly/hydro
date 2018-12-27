@@ -176,6 +176,14 @@ prop_passwords() ->
       false == hydro_api:pwhash_verify(H2, P, K1, 32, 32, 32)
     end).
 
+prop_kx_n() ->
+  ?FORALL({}, {},
+  begin 
+    {ok, Pk, Sk} = hydro_api:kx_keygen(),
+    true = is_binary(Pk),
+    true = is_binary(Sk)
+  end).
+
 %%%%%%%%%%%%%%%
 %%% Helpers %%%
 %%%%%%%%%%%%%%%
