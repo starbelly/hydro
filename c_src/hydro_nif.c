@@ -3,19 +3,18 @@
 #include <hydrogen.h>
 
 #define ATOM_OK "ok"
-#define ATOM_UNKNOWN "unknown"
 #define ATOM_ERROR "error"
 #define ATOM_TRUE "true"
 #define ATOM_FALSE "false"
-#define ATOM_OOM "out_of_memory"
+#define ATOM_OOM "memory_allocation_failed"
 #define ATOM_ENCRYPT_FAIL "encrypt_failed"
 #define ATOM_DECRYPT_FAIL "decrypt_failed"
+#define ATOM_CONVERSION_FAIL "conversion_failed"
 #define ATOM_BAD_SIZE "bad_size"
 #define ATOM_BAD_SALT_SIZE "bad_salt_size"
 #define ATOM_BAD_HASH_SIZE "bad_hash_size"
 #define ATOM_BAD_CTX_SIZE "bad_context_size"
 #define ATOM_BAD_KEY_SIZE "bad_key_size"
-#define ATOM_BAD_NONCE_SIZE "bad_nonce_size"
 
 #define MK_ATOM(env, str) enif_make_atom(env, str)
 #define MK_BIN(env, bin) enif_make_binary(env, bin)
@@ -24,23 +23,17 @@
 #define BADARG(env) enif_make_badarg(env)
 #define GET_BIN(env, term, bin) enif_inspect_binary(env, term, bin)
 #define GET_RESOURCE(env, term, type, res) enif_get_resource(env, term, type, res)
-#define MK_UINT(env, val, size) enif_get_uint(env, val, size)
 #define ALLOC_BIN(size, pk) enif_alloc_binary(size, pk)
 #define ALLOC_RESOURCE(env, type) enif_alloc_resource(env, type)
 #define ERROR(env, atom_arg) enif_make_tuple2(env, MK_ATOM(env, ATOM_ERROR), MK_ATOM(env, atom_arg))
-#define OOM_ERROR(env) ERROR(env, ATOM_OOM)
 #define ENCRYPT_FAILED_ERROR(env) ERROR(env, ATOM_ENCRYPT_FAIL)
 #define DECRYPT_FAILED_ERROR(env) ERROR(env, ATOM_DECRYPT_FAIL)
-#define BAD_SALT_SIZE_ERROR(env) ERROR(env, ATOM_BAD_SALT_SIZE)
-#define BAD_KEY_SIZE_ERROR(env) ERROR(env, ATOM_BAD_KEY_SIZE)
-#define BAD_NONCE_SIZE_ERROR(env) ERROR(env, ATOM_BAD_NONCE_SIZE)
 #define OK_TUPLE(env, ret) enif_make_tuple2(env, MK_ATOM(env, ATOM_OK), ret)
 #define OK_TUPLE3(env, ret1, ret2) enif_make_tuple3(env, MK_ATOM(env, ATOM_OK), ret1, ret2)
 #define RAISE(env, atom_arg) enif_raise_exception(env, MK_ATOM(env, atom_arg))
 #define FREE(r) enif_free(r)
 #define FREE_BIN(bin) enif_release_binary(bin)
 #define FREE_RESOURCE(res) enif_release_resource(res)
-#define IS_NUM(env, arg) enif_is_number(env, arg)
 #define GT(arg1, arg2) arg1 > arg2
 #define LT(arg1, arg2) arg1 < arg2
 #define LT_OR_EQ(arg1, arg2) arg1 <= arg2
@@ -99,13 +92,13 @@ enif_hydro_bin2hex(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	}
 
 	if (!enif_alloc_binary((bin.size * 2) + 1, &hex)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (NULL ==
 	    hydro_bin2hex((char *)hex.data, (bin.size * 2) + 1, bin.data,
 			  bin.size)) {
-		return ENCRYPT_FAILED_ERROR(env);
+		return RAISE(env, ATOM_CONVERSION_FAIL);
 	}
 
 	return enif_make_binary(env, &hex);
@@ -122,7 +115,7 @@ enif_hydro_random_buf(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	}
 
 	if (!enif_alloc_binary(req_size, &buf)) {
-		return hydro_error(env, "alloc_failed");
+		return RAISE(env, ATOM_OOM);
 	}
 
 	hydro_random_buf(buf.data, buf.size);
@@ -236,7 +229,7 @@ enif_hydro_hash_hash(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	}
 
 	if (!ALLOC_BIN(hydro_hash_BYTES, &h)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 !=
@@ -277,7 +270,7 @@ enif_hydro_hash_init(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 						       hydro_hash_state));
 
 	if (!state) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_hash_init(state, (const char *)c.data, key)) {
@@ -337,7 +330,7 @@ enif_hydro_hash_final(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	}
 
 	if (!ALLOC_BIN(hydro_hash_BYTES, &h)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_hash_final(state, h.data, h.size)) {
@@ -394,7 +387,7 @@ enif_hydro_kdf_derive_from_key(ErlNifEnv * env, int argc,
 	}
 
 	if (!ALLOC_BIN(size, &k)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 !=
@@ -656,7 +649,7 @@ enif_hydro_secretbox_encrypt(ErlNifEnv * env, int argc,
 	}
 
 	if (!ALLOC_BIN(hydro_secretbox_HEADERBYTES + m.size, &h)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 !=
@@ -694,7 +687,7 @@ enif_hydro_secretbox_decrypt(ErlNifEnv * env, int argc,
 	}
 
 	if (!ALLOC_BIN(h.size - hydro_secretbox_HEADERBYTES, &m)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 !=
@@ -729,7 +722,7 @@ enif_hydro_secretbox_probe_create(ErlNifEnv * env, int argc,
 	}
 
 	if (!ALLOC_BIN(hydro_secretbox_PROBEBYTES, &p)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	hydro_secretbox_probe_create(p.data, h.data, h.size,
@@ -782,11 +775,11 @@ enif_hydro_sign_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	hydro_sign_keygen(&kp);
 
 	if (!ALLOC_BIN(hydro_sign_PUBLICKEYBYTES, &pk)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (!ALLOC_BIN(hydro_sign_SECRETKEYBYTES, &sk)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	memmove(pk.data, kp.pk, hydro_sign_PUBLICKEYBYTES);
@@ -816,7 +809,7 @@ enif_hydro_sign_create(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	}
 
 	if (!ALLOC_BIN(hydro_sign_BYTES, &s)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_sign_create(s.data, m.data, m.size,
@@ -934,7 +927,7 @@ enif_hydro_sign_final_create(ErlNifEnv * env, int argc,
 	}
 
 	if (!ALLOC_BIN(hydro_sign_BYTES, &s)) {
-		return OOM_ERROR(env);
+		return RAISE(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_sign_final_create(state, s.data, sk.data)) {
