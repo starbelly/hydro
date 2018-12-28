@@ -26,7 +26,7 @@ static inline ERL_NIF_TERM ok_tuple(ErlNifEnv * env, ERL_NIF_TERM ret)
 }
 
 static inline ERL_NIF_TERM ok_tuple3(ErlNifEnv * env, ERL_NIF_TERM ret1,
-			      ERL_NIF_TERM ret2)
+				     ERL_NIF_TERM ret2)
 {
 	return enif_make_tuple3(env, enif_make_atom(env, ATOM_OK), ret1, ret2);
 }
@@ -78,15 +78,19 @@ enif_hydro_bin2hex(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 		return enif_make_badarg(env);
 	}
 
-	if (!enif_alloc_binary((bin.size * 2) + 1, &hex)) {
+	unsigned size = (bin.size * 2) + 1;
+	char *buf = enif_alloc(size);
+
+	if (NULL == hydro_bin2hex(buf, size, bin.data, bin.size)) {
+		return error_tuple(env, ATOM_CONVERSION_FAIL);
+	}
+
+	/* Return the buf sans null terminator to create a bitstring */
+	if (!enif_alloc_binary(size - 1, &hex)) {
 		return raise(env, ATOM_OOM);
 	}
 
-	if (NULL ==
-	    hydro_bin2hex((char *)hex.data, (bin.size * 2) + 1, bin.data,
-			  bin.size)) {
-		return error_tuple(env, ATOM_CONVERSION_FAIL);
-	}
+	memmove(hex.data, buf, size - 1);
 
 	return ok_tuple(env, enif_make_binary(env, &hex));
 }

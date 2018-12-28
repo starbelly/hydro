@@ -61,7 +61,8 @@
 
 -spec bin2hex(binary()) -> binary().
 bin2hex(Bin) -> 
-    hd(binary:split(hydro_bin2hex(Bin), <<0>>)).
+    {ok, H} = hydro_bin2hex(Bin),
+    H.
 
 -spec hash_keygen() -> binary().
 hash_keygen() -> 
