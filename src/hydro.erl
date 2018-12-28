@@ -17,12 +17,16 @@
          }
        ).
 
--export([rand/1, rand_uniform/1, dice/0, keygen/1, keygen_pair/1]).
+-export([bin2hex/1, rand/1, rand_uniform/1, dice/0, keygen/1, keygen_pair/1]).
 
 -export([hash_keygen/0, hash/2, hash/3, hash_init/1, hash_init/2, hash_update/2,
          hash_final/1]).
 
 -export([box_seal/2, box_open/3, box_seal/3, box_open/4]).
+
+-spec bin2hex(binary()) -> binary().
+bin2hex(Bin) ->
+    hydro_api:bin2hex(Bin).
 
 -spec box_seal(binary(), binary()) -> 
     {ok, binary(), binary()} | {error, term()}.
@@ -56,7 +60,7 @@ box_open(C, H, I, K) ->
 rand(N) when N >= 0 ->
     hydro_api:random_buf(N).
 
--spec rand_uniform(non_neg_integer()) -> integer().
+-spec rand_uniform(non_neg_integer()) -> non_neg_integer().
 rand_uniform(N) when N >= 0 ->
     hydro_api:random_uniform(N).
 
