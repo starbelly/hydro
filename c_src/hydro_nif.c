@@ -15,23 +15,23 @@
 #define HASH_STATE_NAME "hydro_hash_state"
 #define SIGN_STATE_NAME "hydro_sign_state"
 
-inline ERL_NIF_TERM raise(ErlNifEnv * env, const char *atom_arg)
+static inline ERL_NIF_TERM raise(ErlNifEnv * env, const char *atom_arg)
 {
 	return enif_raise_exception(env, enif_make_atom(env, atom_arg));
 }
 
-inline ERL_NIF_TERM ok_tuple(ErlNifEnv * env, ERL_NIF_TERM ret)
+static inline ERL_NIF_TERM ok_tuple(ErlNifEnv * env, ERL_NIF_TERM ret)
 {
 	return enif_make_tuple2(env, enif_make_atom(env, ATOM_OK), ret);
 }
 
-inline ERL_NIF_TERM ok_tuple3(ErlNifEnv * env, ERL_NIF_TERM ret1,
+static inline ERL_NIF_TERM ok_tuple3(ErlNifEnv * env, ERL_NIF_TERM ret1,
 			      ERL_NIF_TERM ret2)
 {
 	return enif_make_tuple3(env, enif_make_atom(env, ATOM_OK), ret1, ret2);
 }
 
-inline ERL_NIF_TERM error_tuple(ErlNifEnv * env, char *error_atom)
+static inline ERL_NIF_TERM error_tuple(ErlNifEnv * env, char *error_atom)
 {
 	return enif_make_tuple2(env, enif_make_atom(env, "error"),
 				enif_make_atom(env, error_atom));
@@ -85,7 +85,7 @@ enif_hydro_bin2hex(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	if (NULL ==
 	    hydro_bin2hex((char *)hex.data, (bin.size * 2) + 1, bin.data,
 			  bin.size)) {
-		return error_tuple(env, "conversion_failed");
+		return error_tuple(env, ATOM_CONVERSION_FAIL);
 	}
 
 	return ok_tuple(env, enif_make_binary(env, &hex));
