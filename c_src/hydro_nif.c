@@ -10,39 +10,32 @@
 #define ATOM_ENCRYPT_FAIL "encrypt_failed"
 #define ATOM_DECRYPT_FAIL "decrypt_failed"
 #define ATOM_CONVERSION_FAIL "conversion_failed"
-#define ATOM_BAD_SIZE "bad_size"
-#define ATOM_BAD_SALT_SIZE "bad_salt_size"
-#define ATOM_BAD_HASH_SIZE "bad_hash_size"
 #define ATOM_BAD_CTX_SIZE "bad_context_size"
 #define ATOM_BAD_KEY_SIZE "bad_key_size"
-
-#define MK_ATOM(env, str) enif_make_atom(env, str)
-#define MK_BIN(env, bin) enif_make_binary(env, bin)
-#define MK_TUPLE(env, ret1, ret2) enif_make_tuple2(env, ret1, ret2)
-#define MK_RESOURCE(env, res) enif_make_resource(env, res)
-#define BADARG(env) enif_make_badarg(env)
-#define GET_BIN(env, term, bin) enif_inspect_binary(env, term, bin)
-#define GET_RESOURCE(env, term, type, res) enif_get_resource(env, term, type, res)
-#define ALLOC_BIN(size, pk) enif_alloc_binary(size, pk)
-#define ALLOC_RESOURCE(env, type) enif_alloc_resource(env, type)
-#define ERROR(env, atom_arg) enif_make_tuple2(env, MK_ATOM(env, ATOM_ERROR), MK_ATOM(env, atom_arg))
-#define ENCRYPT_FAILED_ERROR(env) ERROR(env, ATOM_ENCRYPT_FAIL)
-#define DECRYPT_FAILED_ERROR(env) ERROR(env, ATOM_DECRYPT_FAIL)
-#define OK_TUPLE(env, ret) enif_make_tuple2(env, MK_ATOM(env, ATOM_OK), ret)
-#define OK_TUPLE3(env, ret1, ret2) enif_make_tuple3(env, MK_ATOM(env, ATOM_OK), ret1, ret2)
-#define RAISE(env, atom_arg) enif_raise_exception(env, MK_ATOM(env, atom_arg))
-#define FREE(r) enif_free(r)
-#define FREE_BIN(bin) enif_release_binary(bin)
-#define FREE_RESOURCE(res) enif_release_resource(res)
-#define GT(arg1, arg2) arg1 > arg2
-#define LT(arg1, arg2) arg1 < arg2
-#define LT_OR_EQ(arg1, arg2) arg1 <= arg2
-#define GT_OR_EQ(arg1, arg2) arg1 >= arg2
-#define IN_RANGE(arg1, arg2, arg3) (LT_OR_EQ(arg2, arg1) && GT_OR_EQ(arg2, arg1))
-#define NOT_IN_RANGE(arg1, arg2, arg3) (LT_OR_EQ(arg1, arg2) || GT_OR_EQ(arg1, arg3))
-
 #define HASH_STATE_NAME "hydro_hash_state"
 #define SIGN_STATE_NAME "hydro_sign_state"
+
+inline ERL_NIF_TERM raise(ErlNifEnv * env, const char *atom_arg)
+{
+	return enif_raise_exception(env, enif_make_atom(env, atom_arg));
+}
+
+inline ERL_NIF_TERM ok_tuple(ErlNifEnv * env, ERL_NIF_TERM ret)
+{
+	return enif_make_tuple2(env, enif_make_atom(env, ATOM_OK), ret);
+}
+
+inline ERL_NIF_TERM ok_tuple3(ErlNifEnv * env, ERL_NIF_TERM ret1,
+			      ERL_NIF_TERM ret2)
+{
+	return enif_make_tuple3(env, enif_make_atom(env, ATOM_OK), ret1, ret2);
+}
+
+inline ERL_NIF_TERM error_tuple(ErlNifEnv * env, char *error_atom)
+{
+	return enif_make_tuple2(env, enif_make_atom(env, "error"),
+				enif_make_atom(env, error_atom));
+}
 
 static ErlNifResourceType *hydro_hash_state_t = NULL;
 static ErlNifResourceType *hydro_sign_state_t = NULL;
@@ -75,33 +68,27 @@ static void hydro_unload(ErlNifEnv * env, void *priv)
 	return;
 }
 
-static ERL_NIF_TERM hydro_error(ErlNifEnv * env, char *error_atom)
-{
-	return enif_make_tuple2(env, enif_make_atom(env, "error"),
-				enif_make_atom(env, error_atom));
-}
-
 static ERL_NIF_TERM
 enif_hydro_bin2hex(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 {
 	ErlNifBinary bin, hex;
 
 	if ((1 != argc)
-	    || (!GET_BIN(env, argv[0], &bin))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &bin))) {
+		return enif_make_badarg(env);
 	}
 
 	if (!enif_alloc_binary((bin.size * 2) + 1, &hex)) {
-		return RAISE(env, ATOM_OOM);
+		return raise(env, ATOM_OOM);
 	}
 
 	if (NULL ==
 	    hydro_bin2hex((char *)hex.data, (bin.size * 2) + 1, bin.data,
 			  bin.size)) {
-		return RAISE(env, ATOM_CONVERSION_FAIL);
+		return error_tuple(env, "conversion_failed");
 	}
 
-	return enif_make_binary(env, &hex);
+	return ok_tuple(env, enif_make_binary(env, &hex));
 }
 
 static ERL_NIF_TERM
@@ -115,7 +102,7 @@ enif_hydro_random_buf(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	}
 
 	if (!enif_alloc_binary(req_size, &buf)) {
-		return RAISE(env, ATOM_OOM);
+		return raise(env, ATOM_OOM);
 	}
 
 	hydro_random_buf(buf.data, buf.size);
@@ -132,12 +119,12 @@ enif_hydro_random_buf_deterministic(ErlNifEnv * env, int argc,
 
 	if ((argc != 2)
 	    || (!enif_get_uint(env, argv[0], &size))
-	    || (!GET_BIN(env, argv[1], &seed))) {
+	    || (!enif_inspect_binary(env, argv[1], &seed))) {
 		return enif_make_badarg(env);
 	}
 
 	if (!enif_alloc_binary(size, &buf)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	hydro_random_buf_deterministic(buf.data, buf.size, seed.data);
@@ -181,7 +168,7 @@ enif_hydro_random_ratchet(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 
 	hydro_random_ratchet();
 
-	return MK_ATOM(env, ATOM_OK);
+	return enif_make_atom(env, ATOM_OK);
 }
 
 static ERL_NIF_TERM
@@ -194,7 +181,7 @@ enif_hydro_hash_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	}
 
 	if (!enif_alloc_binary(hydro_hash_KEYBYTES, &hash)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	hydro_hash_keygen(hash.data);
@@ -208,10 +195,10 @@ enif_hydro_hash_hash(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary h, m, c, k;
 
 	if ((3 != argc)
-	    || (!GET_BIN(env, argv[0], &m))
-	    || (!GET_BIN(env, argv[1], &c))
-	    || (!GET_BIN(env, argv[2], &k))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &m))
+	    || (!enif_inspect_binary(env, argv[1], &c))
+	    || (!enif_inspect_binary(env, argv[2], &k))) {
+		return enif_make_badarg(env);
 	}
 
 	unsigned char *key = k.data;
@@ -220,26 +207,26 @@ enif_hydro_hash_hash(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 		key = NULL;
 	}
 
-	if (key && LT(k.size, hydro_hash_KEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (key && k.size < hydro_hash_KEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
-	if (!ALLOC_BIN(hydro_hash_BYTES, &h)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_hash_BYTES, &h)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 !=
 	    hydro_hash_hash(h.data, h.size, (const char *)m.data,
 			    (unsigned long)m.size, (const char *)c.data, key)) {
-		FREE_BIN(&h);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_binary(&h);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &h));
+	return ok_tuple(env, enif_make_binary(env, &h));
 
 }
 
@@ -249,39 +236,39 @@ enif_hydro_hash_init(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary c, k;
 
 	if ((2 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &k))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &k))) {
+		return enif_make_badarg(env);
 	}
 
 	unsigned char *key = (0 == k.size) ? NULL : k.data;
 
-	if (key && LT(k.size, hydro_hash_KEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (key && k.size < hydro_hash_KEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
 	hydro_hash_state *state =
-	    (hydro_hash_state *) ALLOC_RESOURCE(hydro_hash_state_t,
-						sizeof(struct
-						       hydro_hash_state));
+	    (hydro_hash_state *) enif_alloc_resource(hydro_hash_state_t,
+						     sizeof(struct
+							    hydro_hash_state));
 
 	if (!state) {
-		return RAISE(env, ATOM_OOM);
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_hash_init(state, (const char *)c.data, key)) {
-		FREE_RESOURCE(state);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_resource(state);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	ERL_NIF_TERM r = MK_RESOURCE(env, state);
-	FREE_RESOURCE(state);
+	ERL_NIF_TERM r = enif_make_resource(env, state);
+	enif_release_resource(state);
 
-	return OK_TUPLE(env, r);
+	return ok_tuple(env, r);
 }
 
 static ERL_NIF_TERM
@@ -292,28 +279,29 @@ enif_hydro_hash_update(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 
 	if ((2 != argc)
 	    ||
-	    (!GET_RESOURCE(env, argv[0], hydro_hash_state_t, (void **)&state))
-	    || (!GET_BIN(env, argv[1], &m))) {
-		return BADARG(env);
+	    (!enif_get_resource
+	     (env, argv[0], hydro_hash_state_t, (void **)&state))
+	    || (!enif_inspect_binary(env, argv[1], &m))) {
+		return enif_make_badarg(env);
 	}
 
 	hydro_hash_state *new_state =
-	    (hydro_hash_state *) ALLOC_RESOURCE(hydro_hash_state_t,
-						sizeof(struct
-						       hydro_hash_state));
+	    (hydro_hash_state *) enif_alloc_resource(hydro_hash_state_t,
+						     sizeof(struct
+							    hydro_hash_state));
 
 	memcpy(new_state->state, state->state, sizeof(*new_state));
 
 	if (0 !=
 	    hydro_hash_update(new_state, (const char *)m.data,
 			      (unsigned long)m.size)) {
-		return ENCRYPT_FAILED_ERROR(env);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	ERL_NIF_TERM r = MK_RESOURCE(env, new_state);
-	FREE_RESOURCE(new_state);
+	ERL_NIF_TERM r = enif_make_resource(env, new_state);
+	enif_release_resource(new_state);
 
-	return OK_TUPLE(env, r);
+	return ok_tuple(env, r);
 }
 
 static ERL_NIF_TERM
@@ -324,22 +312,22 @@ enif_hydro_hash_final(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 
 	if ((1 != argc)
 	    ||
-	    (!GET_RESOURCE(env, argv[0], hydro_hash_state_t, (void **)&state)))
-	{
-		return BADARG(env);
+	    (!enif_get_resource
+	     (env, argv[0], hydro_hash_state_t, (void **)&state))) {
+		return enif_make_badarg(env);
 	}
 
-	if (!ALLOC_BIN(hydro_hash_BYTES, &h)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_hash_BYTES, &h)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_hash_final(state, h.data, h.size)) {
-		FREE_BIN(&h);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_binary(&h);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
 	ERL_NIF_TERM ret = enif_make_binary(env, &h);
-	return OK_TUPLE(env, ret);
+	return ok_tuple(env, ret);
 }
 
 static ERL_NIF_TERM
@@ -353,12 +341,12 @@ enif_hydro_kdf_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary m;
 
 	if (!enif_alloc_binary(hydro_kdf_KEYBYTES, &m)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	hydro_kdf_keygen(m.data);
 
-	return MK_BIN(env, &m);
+	return enif_make_binary(env, &m);
 }
 
 static ERL_NIF_TERM
@@ -371,33 +359,33 @@ enif_hydro_kdf_derive_from_key(ErlNifEnv * env, int argc,
 	unsigned sub_id;
 
 	if ((4 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &m))
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &m))
 	    || (!enif_get_uint(env, argv[2], &sub_id))
 	    || (!enif_get_uint(env, argv[3], &size))) {
-		return BADARG(env);
+		return enif_make_badarg(env);
 	}
 
-	if (LT(m.size, hydro_kdf_KEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (m.size < hydro_kdf_KEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
-	if (!ALLOC_BIN(size, &k)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(size, &k)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 !=
 	    hydro_kdf_derive_from_key(k.data, size, sub_id,
 				      (const char *)c.data, m.data)) {
-		FREE_BIN(&k);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_binary(&k);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &k));
+	return ok_tuple(env, enif_make_binary(env, &k));
 
 }
 
@@ -412,12 +400,12 @@ enif_hydro_pwhash_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary mk;
 
 	if (!enif_alloc_binary(hydro_pwhash_MASTERKEYBYTES, &mk)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	hydro_pwhash_keygen(mk.data);
 
-	return MK_BIN(env, &mk);
+	return enif_make_binary(env, &mk);
 }
 
 static ERL_NIF_TERM
@@ -431,23 +419,23 @@ enif_hydro_pwhash_deterministic(ErlNifEnv * env, int argc,
 	unsigned ops_limit;
 
 	if ((5 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &p))
-	    || (!GET_BIN(env, argv[2], &mk))
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &p))
+	    || (!enif_inspect_binary(env, argv[2], &mk))
 	    || (!enif_get_uint(env, argv[3], &size))
 	    || (!enif_get_uint(env, argv[4], &ops_limit))) {
-		return BADARG(env);
+		return enif_make_badarg(env);
 	}
 
 	if (!enif_alloc_binary(size, &h)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	hydro_pwhash_deterministic(h.data, h.size, (const char *)p.data, p.size,
 				   (const char *)c.data, mk.data, ops_limit, 0,
 				   1);
 
-	return OK_TUPLE(env, MK_BIN(env, &h));
+	return ok_tuple(env, enif_make_binary(env, &h));
 }
 
 static ERL_NIF_TERM
@@ -461,22 +449,22 @@ enif_hydro_pwhash_create(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary h, p, mk;
 
 	if ((5 != argc)
-	    || (!GET_BIN(env, argv[0], &p))
-	    || (!GET_BIN(env, argv[1], &mk))
+	    || (!enif_inspect_binary(env, argv[0], &p))
+	    || (!enif_inspect_binary(env, argv[1], &mk))
 	    || (!enif_get_uint(env, argv[2], &ops_limit))
 	    || (!enif_get_uint(env, argv[3], &mem_limit))
 	    || (!enif_get_uint(env, argv[4], &threads))) {
-		return BADARG(env);
+		return enif_make_badarg(env);
 	}
 
 	if (!enif_alloc_binary(hydro_pwhash_STOREDBYTES, &h)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	hydro_pwhash_create(h.data, (const char *)p.data, p.size,
 			    mk.data, ops_limit, mem_limit, threads);
 
-	return OK_TUPLE(env, MK_BIN(env, &h));
+	return ok_tuple(env, enif_make_binary(env, &h));
 }
 
 static ERL_NIF_TERM
@@ -490,21 +478,21 @@ enif_hydro_pwhash_verify(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary h, p, mk;
 
 	if ((6 != argc)
-	    || (!GET_BIN(env, argv[0], &h))
-	    || (!GET_BIN(env, argv[1], &p))
-	    || (!GET_BIN(env, argv[2], &mk))
+	    || (!enif_inspect_binary(env, argv[0], &h))
+	    || (!enif_inspect_binary(env, argv[1], &p))
+	    || (!enif_inspect_binary(env, argv[2], &mk))
 	    || (!enif_get_uint(env, argv[3], &ops_limit))
 	    || (!enif_get_uint(env, argv[4], &mem_limit))
 	    || (!enif_get_uint(env, argv[5], &threads))) {
-		return BADARG(env);
+		return enif_make_badarg(env);
 	}
 
 	if (0 != hydro_pwhash_verify(h.data, (const char *)p.data, p.size,
 				     mk.data, ops_limit, mem_limit, threads)) {
-		return MK_ATOM(env, ATOM_FALSE);
+		return enif_make_atom(env, ATOM_FALSE);
 	}
 
-	return MK_ATOM(env, ATOM_TRUE);
+	return enif_make_atom(env, ATOM_TRUE);
 }
 
 static ERL_NIF_TERM
@@ -519,18 +507,18 @@ enif_hydro_pwhash_derive_static_key(ErlNifEnv * env, int argc,
 	ErlNifBinary c, h, p, mk, sk;
 
 	if ((7 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &h))
-	    || (!GET_BIN(env, argv[2], &p))
-	    || (!GET_BIN(env, argv[3], &mk))
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &h))
+	    || (!enif_inspect_binary(env, argv[2], &p))
+	    || (!enif_inspect_binary(env, argv[3], &mk))
 	    || (!enif_get_uint(env, argv[4], &ops_limit))
 	    || (!enif_get_uint(env, argv[5], &mem_limit))
 	    || (!enif_get_uint(env, argv[6], &threads))) {
-		return BADARG(env);
+		return enif_make_badarg(env);
 	}
 
 	if (!enif_alloc_binary(64, &sk)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	if (0 !=
@@ -538,10 +526,10 @@ enif_hydro_pwhash_derive_static_key(ErlNifEnv * env, int argc,
 					   (const char *)p.data, p.size,
 					   (const char *)c.data, mk.data,
 					   ops_limit, mem_limit, threads)) {
-		return hydro_error(env, "deriv_failed");
+		return error_tuple(env, "deriv_failed");
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &sk));
+	return ok_tuple(env, enif_make_binary(env, &sk));
 }
 
 static ERL_NIF_TERM
@@ -552,23 +540,23 @@ enif_hydro_pwhash_reencrypt(ErlNifEnv * env, int argc,
 	ErlNifBinary h1, h, mk, nmk;
 
 	if ((3 != argc)
-	    || (!GET_BIN(env, argv[0], &h))
-	    || (!GET_BIN(env, argv[1], &mk))
-	    || (!GET_BIN(env, argv[2], &nmk))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &h))
+	    || (!enif_inspect_binary(env, argv[1], &mk))
+	    || (!enif_inspect_binary(env, argv[2], &nmk))) {
+		return enif_make_badarg(env);
 	}
 
 	if (!enif_alloc_binary(h.size, &h1)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	memcpy(h1.data, h.data, h.size);
 
 	if (0 != hydro_pwhash_reencrypt(h1.data, mk.data, nmk.data)) {
-		return hydro_error(env, "incorrect_key");
+		return error_tuple(env, "incorrect_key");
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &h1));
+	return ok_tuple(env, enif_make_binary(env, &h1));
 }
 
 static ERL_NIF_TERM
@@ -582,16 +570,16 @@ enif_hydro_pwhash_upgrade(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary h1, h, mk;
 
 	if ((5 != argc)
-	    || (!GET_BIN(env, argv[0], &h))
-	    || (!GET_BIN(env, argv[1], &mk))
+	    || (!enif_inspect_binary(env, argv[0], &h))
+	    || (!enif_inspect_binary(env, argv[1], &mk))
 	    || (!enif_get_uint(env, argv[2], &ops_limit))
 	    || (!enif_get_uint(env, argv[3], &mem_limit))
 	    || (!enif_get_uint(env, argv[4], &threads))) {
-		return BADARG(env);
+		return enif_make_badarg(env);
 	}
 
 	if (!enif_alloc_binary(h.size, &h1)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	memcpy(h1.data, h.data, h.size);
@@ -599,10 +587,10 @@ enif_hydro_pwhash_upgrade(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	if (0 !=
 	    hydro_pwhash_upgrade(h1.data, mk.data, ops_limit, mem_limit,
 				 threads)) {
-		return hydro_error(env, "incorrect_key");
+		return error_tuple(env, "incorrect_key");
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &h1));
+	return ok_tuple(env, enif_make_binary(env, &h1));
 }
 
 static ERL_NIF_TERM
@@ -617,12 +605,12 @@ enif_hydro_secretbox_keygen(ErlNifEnv * env, int argc,
 	ErlNifBinary k;
 
 	if (!enif_alloc_binary(hydro_secretbox_KEYBYTES, &k)) {
-		return hydro_error(env, "alloc_failed");
+		return error_tuple(env, "alloc_failed");
 	}
 
 	hydro_kdf_keygen(k.data);
 
-	return MK_BIN(env, &k);
+	return enif_make_binary(env, &k);
 }
 
 static ERL_NIF_TERM
@@ -633,33 +621,33 @@ enif_hydro_secretbox_encrypt(ErlNifEnv * env, int argc,
 	unsigned msg_id;
 
 	if ((4 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &m))
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &m))
 	    || (!enif_get_uint(env, argv[2], &msg_id))
-	    || (!GET_BIN(env, argv[3], &k))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[3], &k))) {
+		return enif_make_badarg(env);
 	}
 
-	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (k.size < hydro_secretbox_KEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
-	if (!ALLOC_BIN(hydro_secretbox_HEADERBYTES + m.size, &h)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_secretbox_HEADERBYTES + m.size, &h)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 !=
 	    hydro_secretbox_encrypt(h.data, m.data, m.size, msg_id,
 				    (const char *)c.data, k.data)) {
-		FREE_BIN(&h);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_binary(&h);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &h));
+	return ok_tuple(env, enif_make_binary(env, &h));
 }
 
 static ERL_NIF_TERM
@@ -671,33 +659,33 @@ enif_hydro_secretbox_decrypt(ErlNifEnv * env, int argc,
 	ErlNifBinary h, c, m, k;
 
 	if ((4 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &h))
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &h))
 	    || (!enif_get_uint(env, argv[2], &msg_id))
-	    || (!GET_BIN(env, argv[3], &k))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[3], &k))) {
+		return enif_make_badarg(env);
 	}
 
-	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (k.size < hydro_secretbox_KEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
-	if (!ALLOC_BIN(h.size - hydro_secretbox_HEADERBYTES, &m)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(h.size - hydro_secretbox_HEADERBYTES, &m)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 !=
 	    hydro_secretbox_decrypt(m.data, h.data, h.size, msg_id,
 				    (const char *)c.data, k.data)) {
-		FREE_BIN(&h);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_binary(&h);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &m));
+	return ok_tuple(env, enif_make_binary(env, &m));
 }
 
 static ERL_NIF_TERM
@@ -707,28 +695,28 @@ enif_hydro_secretbox_probe_create(ErlNifEnv * env, int argc,
 	ErlNifBinary h, c, k, p;
 
 	if ((3 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &h))
-	    || (!GET_BIN(env, argv[2], &k))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &h))
+	    || (!enif_inspect_binary(env, argv[2], &k))) {
+		return enif_make_badarg(env);
 	}
 
-	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (k.size < hydro_secretbox_KEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
-	if (!ALLOC_BIN(hydro_secretbox_PROBEBYTES, &p)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_secretbox_PROBEBYTES, &p)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	hydro_secretbox_probe_create(p.data, h.data, h.size,
 				     (const char *)c.data, k.data);
 
-	return MK_BIN(env, &p);
+	return enif_make_binary(env, &p);
 }
 
 static ERL_NIF_TERM
@@ -738,27 +726,27 @@ enif_hydro_secretbox_probe_verify(ErlNifEnv * env, int argc,
 	ErlNifBinary h, c, k, p;
 
 	if ((4 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &h))
-	    || (!GET_BIN(env, argv[2], &k))
-	    || (!GET_BIN(env, argv[3], &p))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &h))
+	    || (!enif_inspect_binary(env, argv[2], &k))
+	    || (!enif_inspect_binary(env, argv[3], &p))) {
+		return enif_make_badarg(env);
 	}
 
-	if (LT(k.size, hydro_secretbox_KEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (k.size < hydro_secretbox_KEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
 	if (0 != hydro_secretbox_probe_verify(p.data, h.data, h.size,
 					      (const char *)c.data, k.data)) {
-		return ENCRYPT_FAILED_ERROR(env);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	return MK_ATOM(env, ATOM_TRUE);
+	return enif_make_atom(env, ATOM_TRUE);
 }
 
 static ERL_NIF_TERM
@@ -774,18 +762,19 @@ enif_hydro_sign_keygen(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	hydro_sign_keypair kp;
 	hydro_sign_keygen(&kp);
 
-	if (!ALLOC_BIN(hydro_sign_PUBLICKEYBYTES, &pk)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_sign_PUBLICKEYBYTES, &pk)) {
+		return raise(env, ATOM_OOM);
 	}
 
-	if (!ALLOC_BIN(hydro_sign_SECRETKEYBYTES, &sk)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_sign_SECRETKEYBYTES, &sk)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	memmove(pk.data, kp.pk, hydro_sign_PUBLICKEYBYTES);
 	memmove(sk.data, kp.sk, hydro_sign_SECRETKEYBYTES);
 
-	return OK_TUPLE3(env, MK_BIN(env, &pk), MK_BIN(env, &sk));
+	return ok_tuple3(env, enif_make_binary(env, &pk),
+			 enif_make_binary(env, &sk));
 }
 
 static ERL_NIF_TERM
@@ -794,30 +783,30 @@ enif_hydro_sign_create(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary c, m, sk, s;
 
 	if ((3 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &m))
-	    || (!GET_BIN(env, argv[2], &sk))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &m))
+	    || (!enif_inspect_binary(env, argv[2], &sk))) {
+		return enif_make_badarg(env);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
-	if (LT(sk.size, hydro_sign_SECRETKEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (sk.size < hydro_sign_SECRETKEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
-	if (!ALLOC_BIN(hydro_sign_BYTES, &s)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_sign_BYTES, &s)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_sign_create(s.data, m.data, m.size,
 				   (const char *)c.data, sk.data)) {
-		return ENCRYPT_FAILED_ERROR(env);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	return OK_TUPLE(env, MK_BIN(env, &s));
+	return ok_tuple(env, enif_make_binary(env, &s));
 }
 
 static ERL_NIF_TERM
@@ -826,27 +815,27 @@ enif_hydro_sign_verify(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary c, m, s, pk;
 
 	if ((4 != argc)
-	    || (!GET_BIN(env, argv[0], &c))
-	    || (!GET_BIN(env, argv[1], &m))
-	    || (!GET_BIN(env, argv[2], &s))
-	    || (!GET_BIN(env, argv[3], &pk))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &c))
+	    || (!enif_inspect_binary(env, argv[1], &m))
+	    || (!enif_inspect_binary(env, argv[2], &s))
+	    || (!enif_inspect_binary(env, argv[3], &pk))) {
+		return enif_make_badarg(env);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
-	if (LT(pk.size, hydro_sign_PUBLICKEYBYTES)) {
-		return ERROR(env, ATOM_BAD_KEY_SIZE);
+	if (pk.size < hydro_sign_PUBLICKEYBYTES) {
+		return error_tuple(env, ATOM_BAD_KEY_SIZE);
 	}
 
 	if (0 != hydro_sign_verify(s.data, m.data, m.size,
 				   (const char *)c.data, pk.data)) {
-		return MK_ATOM(env, ATOM_FALSE);
+		return enif_make_atom(env, ATOM_FALSE);
 	}
 
-	return MK_ATOM(env, ATOM_TRUE);
+	return enif_make_atom(env, ATOM_TRUE);
 }
 
 static ERL_NIF_TERM
@@ -855,28 +844,28 @@ enif_hydro_sign_init(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 	ErlNifBinary c;
 
 	if ((1 != argc)
-	    || (!GET_BIN(env, argv[0], &c))) {
-		return BADARG(env);
+	    || (!enif_inspect_binary(env, argv[0], &c))) {
+		return enif_make_badarg(env);
 	}
 
 	if (c.size != hydro_hash_CONTEXTBYTES) {
-		return ERROR(env, ATOM_BAD_CTX_SIZE);
+		return error_tuple(env, ATOM_BAD_CTX_SIZE);
 	}
 
 	hydro_sign_state *state =
-	    (hydro_sign_state *) ALLOC_RESOURCE(hydro_sign_state_t,
-						sizeof(struct
-						       hydro_sign_state));
+	    (hydro_sign_state *) enif_alloc_resource(hydro_sign_state_t,
+						     sizeof(struct
+							    hydro_sign_state));
 
 	if (0 != hydro_sign_init(state, (const char *)c.data)) {
-		FREE_RESOURCE(state);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_resource(state);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	ERL_NIF_TERM r = MK_RESOURCE(env, state);
-	FREE_RESOURCE(state);
+	ERL_NIF_TERM r = enif_make_resource(env, state);
+	enif_release_resource(state);
 
-	return OK_TUPLE(env, r);
+	return ok_tuple(env, r);
 }
 
 static ERL_NIF_TERM
@@ -887,28 +876,29 @@ enif_hydro_sign_update(ErlNifEnv * env, int argc, ERL_NIF_TERM const argv[])
 
 	if ((2 != argc)
 	    ||
-	    (!GET_RESOURCE(env, argv[0], hydro_sign_state_t, (void **)&state))
-	    || (!GET_BIN(env, argv[1], &m))) {
-		return BADARG(env);
+	    (!enif_get_resource
+	     (env, argv[0], hydro_sign_state_t, (void **)&state))
+	    || (!enif_inspect_binary(env, argv[1], &m))) {
+		return enif_make_badarg(env);
 	}
 
 	hydro_sign_state *new_state =
-	    (hydro_sign_state *) ALLOC_RESOURCE(hydro_sign_state_t,
-						sizeof(struct
-						       hydro_sign_state));
+	    (hydro_sign_state *) enif_alloc_resource(hydro_sign_state_t,
+						     sizeof(struct
+							    hydro_sign_state));
 
 	memcpy(&new_state->hash_st, &state->hash_st, sizeof(*new_state));
 
 	if (0 !=
 	    hydro_sign_update(new_state, (const char *)m.data,
 			      (unsigned long)m.size)) {
-		return ENCRYPT_FAILED_ERROR(env);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
-	ERL_NIF_TERM r = MK_RESOURCE(env, new_state);
-	FREE_RESOURCE(new_state);
+	ERL_NIF_TERM r = enif_make_resource(env, new_state);
+	enif_release_resource(new_state);
 
-	return OK_TUPLE(env, r);
+	return ok_tuple(env, r);
 }
 
 static ERL_NIF_TERM
@@ -921,22 +911,23 @@ enif_hydro_sign_final_create(ErlNifEnv * env, int argc,
 
 	if ((2 != argc)
 	    ||
-	    (!GET_RESOURCE(env, argv[0], hydro_sign_state_t, (void **)&state))
-	    || (!GET_BIN(env, argv[1], &sk))) {
-		return BADARG(env);
+	    (!enif_get_resource
+	     (env, argv[0], hydro_sign_state_t, (void **)&state))
+	    || (!enif_inspect_binary(env, argv[1], &sk))) {
+		return enif_make_badarg(env);
 	}
 
-	if (!ALLOC_BIN(hydro_sign_BYTES, &s)) {
-		return RAISE(env, ATOM_OOM);
+	if (!enif_alloc_binary(hydro_sign_BYTES, &s)) {
+		return raise(env, ATOM_OOM);
 	}
 
 	if (0 != hydro_sign_final_create(state, s.data, sk.data)) {
-		FREE_BIN(&s);
-		return ENCRYPT_FAILED_ERROR(env);
+		enif_release_binary(&s);
+		return error_tuple(env, ATOM_ENCRYPT_FAIL);
 	}
 
 	ERL_NIF_TERM ret = enif_make_binary(env, &s);
-	return OK_TUPLE(env, ret);
+	return ok_tuple(env, ret);
 
 }
 
@@ -950,17 +941,18 @@ enif_hydro_sign_final_verify(ErlNifEnv * env, int argc,
 
 	if ((3 != argc)
 	    ||
-	    (!GET_RESOURCE(env, argv[0], hydro_sign_state_t, (void **)&state))
-	    || (!GET_BIN(env, argv[1], &s))
-	    || (!GET_BIN(env, argv[2], &pk))) {
-		return BADARG(env);
+	    (!enif_get_resource
+	     (env, argv[0], hydro_sign_state_t, (void **)&state))
+	    || (!enif_inspect_binary(env, argv[1], &s))
+	    || (!enif_inspect_binary(env, argv[2], &pk))) {
+		return enif_make_badarg(env);
 	}
 
 	if (0 != hydro_sign_final_verify(state, s.data, pk.data)) {
-		return MK_ATOM(env, ATOM_FALSE);
+		return enif_make_atom(env, ATOM_FALSE);
 	}
 
-	return MK_ATOM(env, ATOM_TRUE);
+	return enif_make_atom(env, ATOM_TRUE);
 
 }
 
