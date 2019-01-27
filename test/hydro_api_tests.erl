@@ -8,11 +8,13 @@ api_test_() ->
    api_harness_gen(1000).
 
 api_harness_gen(N) ->
+    Funs = [ fun generichash/0,
+             fun generichash_multi/0,
+             fun generichash_keyless/0,
+             fun generichash_multi_keyless/0],
+    Shuffled = [X || {_,X} <- lists:sort([ {rand:uniform(), I} || I <- Funs])],
     List =  {setup, fun setup/0, fun cleanup/1,
-             {inparallel, [ fun generichash/0,
-                            fun generichash_multi/0,
-                            fun generichash_keyless/0,
-                            fun generichash_multi_keyless/0]}},
+             {inparallel, Shuffled}},
     {generator,
      fun () ->
              if N > 0 ->
