@@ -24,6 +24,17 @@
 
 -export([box_seal/2, box_open/3, box_seal/3, box_open/4]).
 
+-export([password/2]).
+
+
+-spec password(binary(), binary()) -> {ok, binary()}.
+password(Passwd, Mk) ->
+    hydro_api:pwhash_create(Mk, Passwd, 32, 0, 1).
+
+-spec password_verify(binary(), binary(), binary()) -> boolean().
+password_verify(Ctx, Passwd, Mk) ->
+    hydro_api:pwhash_verify(Ctx, Passwd, Mk).
+
 -spec box_seal(binary(), binary()) ->
     {ok, binary(), binary()} | {error, term()}.
 box_seal(C, M) ->
