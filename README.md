@@ -1,4 +1,4 @@
-Hydro [![Hex Version](https://img.shields.io/hexpm/v/hydro.svg)](https://hex.pm/packages/hydro) [![Gitlab-CI](https://gitlab.com/starbelly/hydro/badges/master/pipeline.svg)](https://gitlab.com/starbelly/hydro/commits/master) [![Travis-CI](https://travis-ci.com/starbelly/hydro.svg?branch=master)](https://travis-ci.com/starbelly/hydro) [![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
+![H](assets/logo-xsmall.png) Hydro [![Hex Version](https://img.shields.io/hexpm/v/hydro.svg)](https://hex.pm/packages/hydro) [![Gitlab-CI](https://gitlab.com/starbelly/hydro/badges/master/pipeline.svg)](https://gitlab.com/starbelly/hydro/commits/master) [![Travis-CI](https://travis-ci.com/starbelly/hydro.svg?branch=master)](https://travis-ci.com/starbelly/hydro) [![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
 ============
 
 Libhydrogen bindings for Erlang
