@@ -12,7 +12,7 @@ prop_rand() ->
   end).
 
 prop_rand_pick() ->
-    ?FORALL(L, vector(42, any()),
+    ?FORALL(L, non_empty(list(non_empty(binary()))),
             begin
                 lists:member(hydro:rand_pick(L), L)
             end).

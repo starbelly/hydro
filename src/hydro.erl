@@ -17,7 +17,7 @@
          }
        ).
 
--export([rand/1, rand_pick/1, rand_uniform/1, dice/0, keygen/1, keygen_pair/1]).
+-export([rand/1, rand_pick/1, shuffle/1, rand_uniform/1, dice/0, keygen/1, keygen_pair/1]).
 
 -export([hash_keygen/0, hash/2, hash/3, hash_init/1, hash_init/2, hash_update/2,
          hash_final/1]).
@@ -137,8 +137,28 @@ hash_final(State) when is_reference(State) ->
 dice() ->
     hydro_api:random_u32().
 
+-spec shuffle(list()) -> list().
+shuffle(OrigList) ->
+    [X || {_,X} <- lists:sort([{ hydro:dice(), I} || I <- OrigList])].
+
 -spec rand_pick(list()) -> any().
-rand_pick(OrigList) ->
-    List = [X || {_,X} <- lists:sort([{ hydro:dice(), I} || I <- OrigList])],
-    lists:nth(hydro:rand_uniform(length(List)) + 1, List).
+rand_pick(List) ->
+    case List of
+        [] ->
+            undefined;
+        List ->
+            rand_element(shuffle(List))
+    end.
+
+rand_element(List) ->
+    Sorted = shuffle(List),
+    lists:nth(rand_pos(length(Sorted)), Sorted).
+
+rand_pos(Upper) ->
+    case hydro:rand_uniform(Upper) of
+        0 ->
+            1;
+        N -> N
+    end.
+
 
