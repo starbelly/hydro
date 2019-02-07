@@ -78,8 +78,35 @@ Generates and returns a random value between 0 and 0xffffffff (inclusive).
 #### shuffle/1 
  Takes and randomly sorts a list. 
 
+```
+1> hydro:shuffle(lists:seq(1,100)).
+[7,84,18,10,50,65,94,82,97,92,28,9,86,49,37,20,63,46,66,23,
+ 64,26,39,16,90,33,15,40,57|...]
+2> hydro:shuffle(lists:seq(1,100)).
+[46,3,5,17,52,38,4,50,55,21,71,80,51,54,88,30,96,18,44,42,
+ 87,29,68,79,65,14,34,53,99|...]
+3> hydro:shuffle(lists:seq(1,100)).
+[81,77,38,63,89,43,79,46,31,28,41,8,68,93,92,76,5,24,29,17,
+ 23,13,26,27,60,71,34,9,40|...]
+```
+
 #### rand_pick/1
   Takes a list, randomly sorts it, and randomly picks an element from the list.
+
+```erlang
+1> hydro:rand_pick(lists:seq(1,100)).
+23
+2> hydro:rand_pick(lists:seq(1,100)).
+27
+3> hydro:rand_pick(lists:seq(1,100)).
+93
+4> hydro:rand_pick(lists:seq(1,100)).
+82
+5> hydro:rand_pick(lists:seq(1,100)).
+98
+6> hydro:rand_pick(lists:seq(1,100)).
+13
+```
 
 #### Generic Hashing
 
