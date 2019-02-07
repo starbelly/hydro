@@ -5,7 +5,6 @@
               {applications,[kernel,stdlib]},
               {env,[]},
               {modules,[]},
-              {maintainers,["Bryan Paxton"]},
               {licenses,["MIT"]},
               {links,[{"Gitlab","https://github.com/starbelly/hydro"},
                       {"Github","https://gitlab.com/starbelly/hydro"}]}]}.
