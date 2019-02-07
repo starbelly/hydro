@@ -78,7 +78,7 @@ Generates and returns a random value between 0 and 0xffffffff (inclusive).
 #### shuffle/1 
  Takes and randomly sorts a list. 
 
-```
+```erlang
 1> hydro:shuffle(lists:seq(1,100)).
 [7,84,18,10,50,65,94,82,97,92,28,9,86,49,37,20,63,46,66,23,
  64,26,39,16,90,33,15,40,57|...]
