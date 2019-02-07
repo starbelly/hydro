@@ -17,39 +17,39 @@
          }
        ).
 
--export([rand/1, rand_uniform/1, dice/0, keygen/1, keygen_pair/1]).
+-export([rand/1, rand_pick/1, rand_uniform/1, dice/0, keygen/1, keygen_pair/1]).
 
 -export([hash_keygen/0, hash/2, hash/3, hash_init/1, hash_init/2, hash_update/2,
          hash_final/1]).
 
 -export([box_seal/2, box_open/3, box_seal/3, box_open/4]).
 
--spec box_seal(binary(), binary()) -> 
+-spec box_seal(binary(), binary()) ->
     {ok, binary(), binary()} | {error, term()}.
-box_seal(C, M) -> 
+box_seal(C, M) ->
     K = hydro_api:secretbox_keygen(),
-    case hydro_api:secretbox_encrypt(C, M, K) of 
+    case hydro_api:secretbox_encrypt(C, M, K) of
         {ok, H} -> {ok, H, K};
         {error, _} = Err -> Err
     end.
 
--spec box_open(binary(), binary(), binary()) -> 
+-spec box_open(binary(), binary(), binary()) ->
     {ok, binary()} | {error, term()}.
-box_open(C, H, K) -> 
+box_open(C, H, K) ->
     hydro_api:secretbox_decrypt(C, H, K).
 
--spec box_seal(binary(), binary(), integer()) -> 
+-spec box_seal(binary(), binary(), integer()) ->
     {ok, binary(), binary()} | {error, term()}.
-box_seal(C, M, I) -> 
+box_seal(C, M, I) ->
     K = hydro_api:secretbox_keygen(),
-    case hydro_api:secretbox_encrypt(C, M, I, K) of 
+    case hydro_api:secretbox_encrypt(C, M, I, K) of
         {ok, H} -> {ok, H, K};
         {error, _} = Err -> Err
     end.
 
--spec box_open(binary(), binary(), integer(), binary()) -> 
+-spec box_open(binary(), binary(), integer(), binary()) ->
     {ok, binary()} | {error, term()}.
-box_open(C, H, I, K) -> 
+box_open(C, H, I, K) ->
     hydro_api:secretbox_decrypt(C, H, I, K).
 
 -spec rand(non_neg_integer()) -> binary().
@@ -64,7 +64,7 @@ rand_uniform(N) when N >= 0 ->
 %%% Generates a key suitable for working with the generic hashing functions
 %%% @end
 -spec hash_keygen() -> binary().
-hash_keygen() -> 
+hash_keygen() ->
     hydro_api:hash_keygen().
 
 -spec keygen(atom()) -> binary().
@@ -113,7 +113,7 @@ hash_init(Context) when is_binary(Context) ->
 %% operation. Updates to the state may be perfomed using returned reference and hash_update/2
 %% @end
 -spec hash_init(binary(), binary()) -> {ok, reference()} | {error, term()}.
-hash_init(Context, Key) when is_binary(Context) 
+hash_init(Context, Key) when is_binary(Context)
                         andalso is_binary(Key) ->
     hydro_api:hash_init(Context, Key).
 
@@ -130,9 +130,15 @@ hash_update(State, Msg) when is_reference(State)
 %% hash state and an output size.
 %% @end
 -spec hash_final(reference()) -> {ok, binary()} | {error, term()}.
-hash_final(State) when is_reference(State) -> 
+hash_final(State) when is_reference(State) ->
     hydro_api:hash_final(State).
 
 -spec dice() -> integer().
-dice() -> 
+dice() ->
     hydro_api:random_u32().
+
+-spec rand_pick(list()) -> any().
+rand_pick(OrigList) ->
+    List = [X || {_,X} <- lists:sort([{ hydro:dice(), I} || I <- OrigList])],
+    lists:nth(hydro:rand_uniform(length(List)) + 1, List).
+

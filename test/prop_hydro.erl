@@ -11,6 +11,12 @@ prop_rand() ->
     is_binary(hydro:rand(I))
   end).
 
+prop_rand_pick() ->
+    ?FORALL(L, vector(42, any()),
+            begin
+                lists:member(hydro:rand_pick(L), L)
+            end).
+
 prop_rand_uniform() ->
   ?FORALL({I},{non_neg_integer()},
   begin
@@ -23,13 +29,13 @@ prop_dice() ->
     is_integer(hydro:dice())
   end).
 
-prop_keygen() -> 
+prop_keygen() ->
     ?FORALL({Type}, {elements([hash, kdf, secretbox, password])},
     begin
         is_binary(hydro:keygen(Type))
     end).
 
-prop_keygen_pair() -> 
+prop_keygen_pair() ->
     ?FORALL({Type}, {elements([sign])},
     begin
         {ok, Pk, Sk} = hydro:keygen_pair(Type),
@@ -107,3 +113,7 @@ prop_box() ->
 %%%%%%%%%%%%%%%%%%
 %%% Generators %%%
 %%%%%%%%%%%%%%%%%%
+%%%
+
+
+
