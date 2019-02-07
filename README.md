@@ -75,6 +75,12 @@ Generates and returns a random value between 0 and 0xffffffff (inclusive).
 2140249458
 ```
 
+#### shuffle/1 
+ Takes and randomly sorts a list. 
+
+#### rand_pick/1
+  Takes a list, randomly sorts it, and randomly picks an element from the list.
+
 #### Generic Hashing
 
 Note that a context is an 8 byte binary. 
