@@ -1,0 +1,255 @@
+@title Hydro
+@version {@version}
+
+@doc
+
+![H](assets/logo-xsmall.png) Hydro [![Hex Version](https://img.shields.io/hexpm/v/hydro.svg)](https://hex.pm/packages/hydro)
+[![Gitlab-CI](https://gitlab.com/starbelly/hydro/badges/master/pipeline.svg)](https://gitlab.com/starbelly/hydro/commits/master)
+[![Travis-CI](https://travis-ci.com/starbelly/hydro.svg?branch=master)](https://travis-ci.com/starbelly/hydro)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)]() ==
+
+<a href="https://www.libhydrogen.org/doc/">libhydrogen</a> bindings for Erlang
+
+- <a href="#about">About</a>
+- <a href="#installation">Installation</a>
+  * <a href="#rebar3">Rebar3</a>
+  * <a href="#mix">Mix</a>
+- <a href="#usage">Usage</a>
+  * <a href="#hydro">Hydro</a>
+    + <a href="#random-number-and-data-generation">random number and data generation</a>
+      - <a href="#rand-1">rand/1</a>
+      - <a href="#rand-uniform-1">rand_uniform/1</a>
+      - <a href="#rand-int-0">rand_int/0</a>
+    + <a href="#key-gen-1">key_gen/1</a>
+    + <a href="#keygen-pair-1">keygen_pair/1</a>
+    + <a href="#generic-hashing">Generic Hashing</a>
+      - <a href="#single-part">Single part</a>
+      - <a href="#multi-part">Multi-part</a>
+    + <a href="#secret-boxes">Secret boxes</a>
+      - <a href="#box-seal-2">box_seal/2</a>
+      - <a href="#box-seal-3">box_seal/3</a>
+      - <a href="#box-open-3">box_open/3</a>
+      - <a href="#box-open-4">box_open/4</a>
+    + <a href="#password-hashing-and-key-deirivation">Password hashing and key deirivation</a>
+      - <a href="#password-1">password/1</a>
+      - <a href="#password-verify-2">password_verify/2</a>
+      - <a href="#password-upgrade-2">password_upgrade/2</a>
+    + <a href="#utilities">Utilities</a>
+      - <a href="#shuffle-1">shuffle/1</a>
+      - <a href="#rand-pick-1">rand_pick/1</a>
+- <a href="#reference">Reference</a>
+
+== About ==
+
+Hydro provides Erlang bindings to the libhydrogen cryptographic library (<a href="https://www.libhydrogen.org/doc/">libhydrogen</a>). Hydro also provides some useful functions as part of the main interface. 
+
+Working with hydro is simple in both Erlang and Elixr.
+
+- <em><b>Erlang</b></em>
+
+```
+1> N = hydro:rand(42).
+&#171;115,97,120,157,28,208,118,165,137,95,122,152,195,49,52,
+  188,73,136,216,201,77,183,29,144&#187;
+1> hydro:rand(42).
+&#171;196,216,103,100,59,248,220,7,212,176,11,59,76,54,33,27,
+  87,166,157,249,120,120,106,253,233,234,148,136,133,...&#187;
+'''
+
+- <em><b>Elixir</b></em>
+
+```
+iex(1)> n = :hydro.rand(42)
+&#171;115,97,120,157,28,208,118,165,137,95,122,152,195,49,52,
+  188,73,136,216,201,77,183,29,144,110,108,111,101,180...&#187;
+'''
+
+== Installation ==
+
+=== Rebar3 ===
+
+```
+{deps, [{hydro, "0.1.0"}]}
+'''
+
+=== Mix ===
+
+```
+def deps do
+  [{:hydro, "~> 0.1.0"}]
+end
+'''
+
+== Usage ==
+
+ There are two main interfaces in hydro. The <code>hydro</code> module and the <code>hydro_api</code> module. The <code>hydro</code> module is the primary interface which most users should feel comfortable with. The <code>hydro_api</code> module more or less mirrors the libhydrogen api and is intended for advanced usage. 
+ 
+ Note that direct access to the nif is not available in this application library. 
+
+=== Hydro ===
+
+==== random number and data generation  ====
+
+
+====# rand/1 ====
+
+Generates and returns a random sequence of bytes up to the specified size. 
+
+```
+1> N = hydro:rand(42).
+&#171;115,97,120,157,28,208,118,165,137,95,122,152,195,49,52,
+  188,73,136,216,201,77,183,29,144&#187;
+1> hydro:rand(42).
+&#171;196,216,103,100,59,248,220,7,212,176,11,59,76,54,33,27,
+  87,166,157,249,120,120,106,253,233,234,148,136,133,...&#187;
+'''
+
+====# rand_uniform/1 ====
+
+Generates and returns a uniform distributed random value between 0 and the supplied upper
+bound (exlusive).
+
+```
+1> hydro:rand_uniform(100*100).
+1243
+2> hydro:rand_uniform(100*100).
+901
+3> hydro:rand_uniform(100*100).
+7966
+'''
+
+====# rand_int/0 ====
+
+Generates and returns a random value between 0 and 0xffffffff (inclusive).
+
+```
+1> hydro:rand_int().
+3397059606
+2> hydro:rand_int().
+2426160804
+3> hydro:rand_int().
+2140249458
+'''
+
+==== key_gen/1 ====
+
+```
+ hydro:keygen(hash)
+'''
+
+==== keygen_pair/1 ====
+
+==== Generic Hashing ====
+
+Note that a context is an 8 byte binary. 
+
+====# Single part ====
+
+Without a key
+
+```
+1> hydro:hash(&#171;"context0"&#187;, &#171;"msg"&#187;, 64).
+{ok,&#171;231,51,76,246,39,178,123,195,254,34,172,216,53,135,
+      95,160,94,6,97,118,224,8,66,187,247,150,58,...&#187;}
+'''
+
+With a key
+
+```
+1> hydro:hash(&#171;"context1"&#187;, &#171;"msg"&#187;, 32, hydro:hash_keygen()).
+{ok,&#171;55,230,42,62,224,198,89,79,68,155,73,29,38,82,114,
+      199,66,128,43,180,27,92,152,135,252,224,145,...&#187;}
+'''
+
+====# Multi-part  ====
+
+Without a key
+
+```
+1> {ok, State} = hydro:hash_init(&#171;"context0"&#187;, 42).
+{ok,#Ref<0.4176683979.2420768776.167622>}
+2> {ok, true} = hydro:hash_update(State, &#171;"MyMsg1"&#187;).
+{ok,true}
+3> {ok, true} = hydro:hash_update(State, &#171;"MyMsg2"&#187;).
+{ok,true}
+4> {ok, Hash} = hydro:hash_final(State, 88).
+{ok,&#171;44,201,1,123,196,16,201,224,112,217,21,86,149,189,
+      159,139,179,108,69,30,129,180,76,56,95,166,17,...&#187;}
+'''
+
+With key
+
+```
+1> {ok, State} = hydro:hash_init(&#171;"context0"&#187;, 64, hydro:hash_keygen()).
+{ok,#Ref<0.1264487252.3744858120.160049>}
+2> {ok, true} = hydro:hash_update(State, &#171;"MyMsg1"&#187;).
+{ok,true}
+3> {ok, true} = hydro:hash_update(State, &#171;"MyMsg2"&#187;).
+{ok,true}
+4> {ok, Hash} = hydro:hash_final(State, 128).
+{ok,&#171;41,55,10,38,139,118,239,161,123,224,141,247,74,77,
+      123,91,119,28,2,34,69,137,146,203,160,122,81,...&#187;}
+'''
+
+==== Secret boxes ====
+
+====# box_seal/2 ====
+
+====# box_seal/3 ====
+
+====# box_open/3 ====
+
+====# box_open/4 ====
+
+==== Password hashing and key deirivation  ====
+
+====# password/1 ====
+
+====# password_verify/2 ====
+
+====# password_upgrade/2  ====
+
+==== Utilities ====
+
+
+====# shuffle/1  ====
+ Takes and randomly sorts a list. 
+
+1> hydro:shuffle(lists:seq(1,100)).
+[7,84,18,10,50,65,94,82,97,92,28,9,86,49,37,20,63,46,66,23,
+ 64,26,39,16,90,33,15,40,57|...]
+2> hydro:shuffle(lists:seq(1,100)).
+[46,3,5,17,52,38,4,50,55,21,71,80,51,54,88,30,96,18,44,42,
+ 87,29,68,79,65,14,34,53,99|...]
+3> hydro:shuffle(lists:seq(1,100)).
+[81,77,38,63,89,43,79,46,31,28,41,8,68,93,92,76,5,24,29,17,
+ 23,13,26,27,60,71,34,9,40|...]
+
+====# rand_pick/1 ====
+  Takes a list, randomly sorts it, and randomly picks an element from the list.
+
+1> hydro:rand_pick(lists:seq(1,100)).
+23
+2> hydro:rand_pick(lists:seq(1,100)).
+27
+3> hydro:rand_pick(lists:seq(1,100)).
+93
+4> hydro:rand_pick(lists:seq(1,100)).
+82
+5> hydro:rand_pick(lists:seq(1,100)).
+98
+6> hydro:rand_pick(lists:seq(1,100)).
+13
+
+=== Hydro API ===
+
+ See the edocs and source code for the <code>hydro_api</code> documentation.
+
+== Reference ==
+
+ - <a href="https://www.libhydrogen.org/doc/">libhydrogen</a>
+<script>
+// Jump directly to a referenced url given in trailing '[]:...'-notation
+function goto(tag) { parent.document.location.href = url(tag); }
+function url(tag) { var o=document.getElementById(tag); return o ? o.href : '#'+tag; }
+</script>
